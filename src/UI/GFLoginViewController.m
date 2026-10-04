@@ -36,8 +36,8 @@ static UIImage *GFQRImage(NSString *text, CGFloat pixelsPerModule)
 @property (nonatomic, strong) UIImageView *qrView;
 @property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) UIButton *openButton;
-@property (nonatomic, strong) UIButton *copyButton;
-@property (nonatomic, strong) UIButton *newCodeButton;
+@property (nonatomic, strong) UIButton *copyLinkButton;
+@property (nonatomic, strong) UIButton *freshCodeButton;
 @property (nonatomic, strong) UIActivityIndicatorView *spinner;
 @property (nonatomic, strong) GFDeviceCode *code;
 @property (nonatomic) BOOL polling;
@@ -69,10 +69,10 @@ static UIImage *GFQRImage(NSString *text, CGFloat pixelsPerModule)
 
     self.openButton = [self button:L(@"Open link here")];
     [self.openButton addTarget:self action:@selector(openLink:) forControlEvents:UIControlEventTouchUpInside];
-    self.copyButton = [self button:L(@"Copy link")];
-    [self.copyButton addTarget:self action:@selector(copyLink) forControlEvents:UIControlEventTouchUpInside];
-    self.newCodeButton = [self button:L(@"New code")];
-    [self.newCodeButton addTarget:self action:@selector(requestCode) forControlEvents:UIControlEventTouchUpInside];
+    self.copyLinkButton = [self button:L(@"Copy link")];
+    [self.copyLinkButton addTarget:self action:@selector(copyLink) forControlEvents:UIControlEventTouchUpInside];
+    self.freshCodeButton = [self button:L(@"New code")];
+    [self.freshCodeButton addTarget:self action:@selector(requestCode) forControlEvents:UIControlEventTouchUpInside];
 
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:[theme spinnerStyle]];
     self.spinner.hidesWhenStopped = YES;
@@ -127,8 +127,8 @@ static UIImage *GFQRImage(NSString *text, CGFloat pixelsPerModule)
     CGFloat total = bw * 3 + 16;
     CGFloat x = (w - total) / 2;
     self.openButton.frame = CGRectMake(x, y + 24, bw, 40);
-    self.copyButton.frame = CGRectMake(x + bw + 8, y + 24, bw, 40);
-    self.newCodeButton.frame = CGRectMake(x + 2 * (bw + 8), y + 24, bw, 40);
+    self.copyLinkButton.frame = CGRectMake(x + bw + 8, y + 24, bw, 40);
+    self.freshCodeButton.frame = CGRectMake(x + 2 * (bw + 8), y + 24, bw, 40);
 }
 
 - (BOOL)shouldAutorotate { return YES; }

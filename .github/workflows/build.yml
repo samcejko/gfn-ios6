@@ -172,7 +172,7 @@ jobs:
         run: |
           export PATH="$THEOS/toolchain/linux/iphone/bin:$THEOS/bin:$PATH"
           SDK="$THEOS/sdks/iPhoneOS9.3.sdk"
-          FLAGS="-arch armv7 -miphoneos-version-min=6.0 -isysroot $SDK -fsyntax-only -w -ferror-limit=0 \
+          FLAGS="-target armv7-apple-ios6.0 -isysroot $SDK -fsyntax-only -w -ferror-limit=0 \
                  -Isrc -Isrc/Net -Isrc/GFN -Isrc/RTC -Isrc/Media -Isrc/UI -Isrc/Util \
                  -Ivendor -Ivendor/mbedtls/include -Ivendor/mbedtls/library -Ivendor/opus/include -Ivendor/qrcodegen \
                  -DOPUS_BUILD -DFIXED_POINT=1 -DDISABLE_FLOAT_API"
