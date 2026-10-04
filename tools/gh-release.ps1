@@ -36,7 +36,7 @@ $section = ''
 if ($changelog -match "(?s)## $([regex]::Escape($Version))[^\n]*\n(.*?)(\n## |\z)") { $section = $Matches[1].Trim() }
 # (ASCII only in this file: Windows PowerShell 5.1 reads a BOM-less script in the ANSI code page)
 $sums = $assets | ForEach-Object { "- ``$($_.Name)`` - SHA-256 ``$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())``" }
-$install = '**Installation (jailbroken iOS 6):** the IPA through `ipainstaller -f GFN6-{0}.ipa` (AppSync Unified), the DEB through `dpkg -i` followed by `su mobile -c uicache`. Both carry the same build; do not keep both installed at once.' -f $Version
+$install = '**Installation (jailbroken iOS 6):** install the **DEB** - `dpkg -i com.samcejko.gfn6_{0}_iphoneos-arm.deb` then `su mobile -c uicache`. It must be the DEB: it goes into `/Applications`, where the app may open the hardware H.264 decoder. An IPA installed into the app container is sandboxed away from the decoder and shows a black screen, so it only works for the non-video screens.' -f $Version
 $notes = ($section, '', $install, '', '**Checksums**', ($sums -join "`n")) -join "`n"
 
 Write-Host "Release $tag of $Repo at $($Sha.Substring(0, [Math]::Min(7, $Sha.Length)))"
