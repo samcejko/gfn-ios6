@@ -173,7 +173,7 @@ static void deliver(gf_h264_depack *d, gf_h264_frame *f, int damaged, gf_h264_au
     d->next_seq = (uint16_t)expect;
     d->have_seq = 1;
     if (d->len && cb) cb(ctx, d->buf, d->len, f->ts, has_idr, damaged);
-    d->frames++;
+    d->frames_out++;
     if (damaged) d->dropped++;
     frame_clear(f);
 }

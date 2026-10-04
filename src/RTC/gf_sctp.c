@@ -129,9 +129,7 @@ static int tsn_le(uint32_t a, uint32_t b) { return (int32_t)(a - b) <= 0; }
 
 static uint32_t rnd32(void)
 {
-    uint32_t v = 0;
-    for (int i = 0; i < 4; i++) v = (v << 8) | (uint32_t)(rand() & 0xff);
-    return v;
+    return arc4random();
 }
 
 // Sends one packet made of the chunks in body (already padded); fills the common header and checksum

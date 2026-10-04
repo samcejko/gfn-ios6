@@ -56,7 +56,7 @@ typedef struct {
     int have_seq;
     uint16_t highest_seq;
     int have_highest;
-    uint64_t frames, dropped;     // frames delivered / of which damaged
+    uint64_t frames_out, dropped; // frames delivered / of which damaged
     uint64_t packets, lost;
     uint16_t missing[64];         // recent gaps, for NACK
     int missing_count;

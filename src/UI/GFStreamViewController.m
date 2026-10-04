@@ -60,6 +60,7 @@
 @property (nonatomic) CGPoint lastPan;
 @property (nonatomic) CGFloat mouseRemainderX, mouseRemainderY;
 @property (nonatomic, strong) NSDictionary *lastStats;
+@property (nonatomic) uint64_t lastDecoderTrouble;
 @end
 
 @implementation GFStreamViewController
@@ -352,6 +353,12 @@
 - (void)peer:(GFPeer *)peer stats:(NSDictionary *)stats
 {
     self.lastStats = stats;
+    // the decoder fell behind or choked on a frame: it waits for a keyframe, so ask the server for one
+    uint64_t trouble = self.decoder.droppedInputs + self.decoder.errors;
+    if (trouble != self.lastDecoderTrouble) {
+        self.lastDecoderTrouble = trouble;
+        if (self.gotFirstFrame) [peer requestKeyframe];
+    }
     if (!self.gotFirstFrame && self.decoder.decodedFrames > 0) {
         self.gotFirstFrame = YES;
         [self.spinner stopAnimating];

@@ -811,7 +811,7 @@ static void video_au_cb(void *ctx, const uint8_t *au, size_t len, uint32_t ts, i
     if (now - _lastStats_us > 1000000) {
         double seconds = _lastStats_us ? (double)(now - _lastStats_us) / 1e6 : 1.0;
         _lastStats_us = now;
-        uint64_t frames = _depack.frames;
+        uint64_t frames = _depack.frames_out;
         NSDictionary *stats = @{
             @"fps": @((double)(frames - _framesLast) / seconds),
             @"kbps": @((double)(_bytesIn - _bytesInLast) * 8.0 / seconds / 1000.0),
