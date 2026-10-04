@@ -60,7 +60,7 @@
 @property (nonatomic) CGPoint lastPan;
 @property (nonatomic) CGFloat mouseRemainderX, mouseRemainderY;
 @property (nonatomic, strong) NSDictionary *lastStats;
-@property (nonatomic) uint64_t lastDecoderTrouble;
+@property (nonatomic) uint64_t lastDecoderErrors;
 @end
 
 @implementation GFStreamViewController
@@ -353,10 +353,11 @@
 - (void)peer:(GFPeer *)peer stats:(NSDictionary *)stats
 {
     self.lastStats = stats;
-    // the decoder fell behind or choked on a frame: it waits for a keyframe, so ask the server for one
-    uint64_t trouble = self.decoder.droppedInputs + self.decoder.errors;
-    if (trouble != self.lastDecoderTrouble) {
-        self.lastDecoderTrouble = trouble;
+    // only a genuine decode error (broken reference chain) needs a fresh keyframe; a dropped input because the
+    // queue was briefly full does not, and asking for one every time just makes a busy moment worse.
+    uint64_t errors = self.decoder.errors;
+    if (errors != self.lastDecoderErrors) {
+        self.lastDecoderErrors = errors;
         if (self.gotFirstFrame) [peer requestKeyframe];
     }
     if (!self.gotFirstFrame && self.decoder.decodedFrames > 0) {

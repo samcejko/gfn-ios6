@@ -22,7 +22,7 @@
     [DEF registerDefaults:@{
         @"darkTheme": @YES,
         @"streamResolution": @"native",
-        @"streamFps": @60,
+        @"streamFps": @30,          // the iPad 2 (A5) decoder holds 30 fps comfortably; 60 fps overruns it and stutters
         @"maxBitrateMbps": @10,
         @"region": @"",
         @"regionName": @"",

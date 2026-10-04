@@ -104,8 +104,10 @@ static void GFLoadVideoToolbox(void)
     if (!g_loaded || !length) return;
     NSData *au = [NSData dataWithBytes:annexB length:length];
     pthread_mutex_lock(&_lock);
-    if (_queue.count >= 4) {
-        // the decoder is behind: start again from the next keyframe rather than build latency
+    // A short Wi-Fi burst can pile a few frames up faster than the decoder drains them. Absorb that (a little
+    // latency) rather than freezing: only when the backlog is large do we drop to the next keyframe, which is the
+    // clean way to resync an H.264 stream (dropping an arbitrary inter frame would corrupt everything after it).
+    if (_queue.count >= 12) {
         _droppedInputs += _queue.count;
         [_queue removeAllObjects];
         [_queueKeyframes removeAllObjects];

@@ -9,10 +9,10 @@
 #define CHANNELS 2
 #define FRAME_SAMPLES 480                       // 10 ms
 #define MAX_FRAME_SAMPLES 5760
-#define RING_FRAMES (SAMPLE_RATE / 4)           // 250 ms of PCM
-#define JITTER_SLOTS 16
-#define TARGET_MS 40
-#define MAX_BUFFER_MS 100
+#define RING_FRAMES (SAMPLE_RATE / 3)           // 333 ms of PCM
+#define JITTER_SLOTS 24
+#define TARGET_MS 60
+#define MAX_BUFFER_MS 160
 #define LIMITER_CEILING 30000.0f
 
 typedef struct {
