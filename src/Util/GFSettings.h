@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 // User preferences, kept in NSUserDefaults. Setters post GFSettingsDidChangeNotification.
 @interface GFSettings : NSObject

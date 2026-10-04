@@ -36,7 +36,7 @@ static UIImage *GFQRImage(NSString *text, CGFloat pixelsPerModule)
 @property (nonatomic, strong) UIImageView *qrView;
 @property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) UIButton *openButton;
-@property (nonatomic, strong) UIButton *copyLinkButton;
+@property (nonatomic, strong) UIButton *linkCopyButton;
 @property (nonatomic, strong) UIButton *freshCodeButton;
 @property (nonatomic, strong) UIActivityIndicatorView *spinner;
 @property (nonatomic, strong) GFDeviceCode *code;
@@ -69,8 +69,8 @@ static UIImage *GFQRImage(NSString *text, CGFloat pixelsPerModule)
 
     self.openButton = [self button:L(@"Open link here")];
     [self.openButton addTarget:self action:@selector(openLink:) forControlEvents:UIControlEventTouchUpInside];
-    self.copyLinkButton = [self button:L(@"Copy link")];
-    [self.copyLinkButton addTarget:self action:@selector(copyLink) forControlEvents:UIControlEventTouchUpInside];
+    self.linkCopyButton = [self button:L(@"Copy link")];
+    [self.linkCopyButton addTarget:self action:@selector(copyLink) forControlEvents:UIControlEventTouchUpInside];
     self.freshCodeButton = [self button:L(@"New code")];
     [self.freshCodeButton addTarget:self action:@selector(requestCode) forControlEvents:UIControlEventTouchUpInside];
 
@@ -127,7 +127,7 @@ static UIImage *GFQRImage(NSString *text, CGFloat pixelsPerModule)
     CGFloat total = bw * 3 + 16;
     CGFloat x = (w - total) / 2;
     self.openButton.frame = CGRectMake(x, y + 24, bw, 40);
-    self.copyLinkButton.frame = CGRectMake(x + bw + 8, y + 24, bw, 40);
+    self.linkCopyButton.frame = CGRectMake(x + bw + 8, y + 24, bw, 40);
     self.freshCodeButton.frame = CGRectMake(x + 2 * (bw + 8), y + 24, bw, 40);
 }
 
