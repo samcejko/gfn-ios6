@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-04)
 
-First version.
+First version. Streams real games on an iPad 2 (iOS 6.1.3), verified with Fortnite: video, audio and a touch
+gamepad all working. Default stream is 30 fps, which the iPad 2's hardware decoder holds smoothly.
 
 - NVIDIA sign-in with a device code (QR code and link), tokens kept in the keychain and refreshed
 - Library and catalog with search, box art and game details
