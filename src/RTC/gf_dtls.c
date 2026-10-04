@@ -23,8 +23,8 @@ struct gf_dtls {
     mbedtls_ssl_config conf;
     mbedtls_ssl_context ssl;
     gf_dtls_io io;
-    char fingerprint[96];
-    char expected[96];
+    char fingerprint[128];
+    char expected[128];
     char error[160];
     int started, connected, failed;
     // the datagram being fed to mbedTLS
@@ -121,10 +121,12 @@ static void hex_fingerprint(const unsigned char *der, size_t len, char *out, siz
 {
     unsigned char hash[32];
     mbedtls_sha256(der, len, hash, 0);
+    // 32 bytes as "AB:CD:...": 95 characters plus the terminator
     size_t o = 0;
-    for (int i = 0; i < 32 && o + 3 < cap; i++) {
+    for (int i = 0; i < 32 && o + 4 <= cap; i++) {
         o += (size_t)snprintf(out + o, cap - o, "%02X%s", hash[i], i < 31 ? ":" : "");
     }
+    if (cap) out[o < cap ? o : cap - 1] = 0;
 }
 
 static int make_certificate(gf_dtls *d)
@@ -240,10 +242,10 @@ static int finish_handshake(gf_dtls *d)
     if (d->expected[0]) {
         const mbedtls_x509_crt *peer = mbedtls_ssl_get_peer_cert(&d->ssl);
         if (!peer) { snprintf(d->error, sizeof(d->error), "no peer certificate"); return -1; }
-        char fp[96];
+        char fp[128];
         hex_fingerprint(peer->raw.p, peer->raw.len, fp, sizeof(fp));
         if (strcmp(fp, d->expected) != 0) {
-            snprintf(d->error, sizeof(d->error), "peer certificate fingerprint mismatch");
+            snprintf(d->error, sizeof(d->error), "peer certificate fingerprint mismatch (got %.23s..., offer %.23s...)", fp, d->expected);
             return -1;
         }
     }
