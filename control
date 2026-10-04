@@ -1,0 +1,9 @@
+Package: com.samcejko.gfn6
+Name: GFN6
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: Unofficial GeForce NOW cloud gaming client for iOS 6 (universal): game library, session queue, WebRTC stream with hardware H.264 decoding, touch gamepad
+Maintainer: samcejko
+Author: samcejko
+Section: Games
+Depends: firmware (>= 6.0)

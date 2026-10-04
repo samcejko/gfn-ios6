@@ -1,0 +1,15 @@
+.theos/
+obj/
+packages/
+vendor/mbedtls/
+vendor/opus/
+vendor/qrcodegen/
+Resources/licenses/
+Resources/Icon*.png
+Resources/Default*.png
+Resources/cacert.pem
+*.ipa
+*.deb
+.DS_Store
+local.json
+.env

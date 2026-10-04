@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GFN6 icon: a dark glossy tile with a green "play" bolt - evokes cloud gaming without NVIDIA's marks.
+     160-unit viewBox like the other apps of the family; iOS adds the rounded mask, the gloss is ours (UIPrerenderedIcon). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2d3238"/>
+      <stop offset="0.55" stop-color="#15181b"/>
+      <stop offset="1" stop-color="#0b0d0f"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b6ef3a"/>
+      <stop offset="0.5" stop-color="#76b900"/>
+      <stop offset="1" stop-color="#4f8a00"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+    <linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.06"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/>
+      <feOffset dx="0" dy="2" result="o"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="160" height="160" fill="url(#bg)"/>
+  <!-- a soft cloud behind the bolt -->
+  <path d="M38 102 a20 20 0 0 1 6-39 a28 28 0 0 1 54-8 a22 22 0 0 1 26 36 a18 18 0 0 1-10 11 z" fill="url(#cloud)"/>
+  <!-- the play bolt: a play triangle with a lightning notch -->
+  <path d="M58 44 L112 76 L58 108 L70 84 L54 84 Z" fill="url(#green)" filter="url(#shadow)"/>
+  <path d="M58 44 L112 76 L58 108 L70 84 L54 84 Z" fill="none" stroke="#dfffa0" stroke-opacity="0.5" stroke-width="1.5"/>
+  <!-- the "6" -->
+  <text x="118" y="146" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="700" font-size="30" fill="#ffffff" fill-opacity="0.85" text-anchor="middle">6</text>
+  <!-- glass highlight -->
+  <path d="M0 0 H160 V58 C120 86 40 86 0 58 Z" fill="url(#gloss)"/>
+</svg>
