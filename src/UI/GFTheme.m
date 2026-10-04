@@ -220,8 +220,8 @@ static UIImage *GFDrawImage(CGSize size, void (^draw)(CGContextRef ctx))
     NSString *key = [NSString stringWithFormat:@"accent-%d-%d", (int)highlighted, (int)disabled];
     return [self cachedImage:key builder:^UIImage *{
         if (disabled) return GFRoundedGradientImage(RGB(190, 190, 196), RGB(160, 160, 168), RGB(140, 140, 148), 7, YES);
-        if (highlighted) return GFRoundedGradientImage(RGB(175, 45, 45), RGB(125, 22, 22), RGB(95, 15, 15), 7, YES);
-        return GFRoundedGradientImage(RGB(236, 90, 85), RGB(186, 32, 32), RGB(140, 22, 22), 7, YES);
+        if (highlighted) return GFRoundedGradientImage(RGB(92, 132, 14), RGB(60, 92, 6), RGB(38, 62, 2), 7, YES);
+        return GFRoundedGradientImage(RGB(158, 214, 70), RGB(104, 164, 12), RGB(72, 118, 6), 7, YES);
     }];
 }
 

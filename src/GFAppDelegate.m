@@ -147,11 +147,11 @@ static UIViewController *GFTopController(UIViewController *root)
     gf_dtls *d = gf_dtls_create();
     GFLog(@"Self test: DTLS certificate %@ in %.0f ms, fingerprint %s", d ? @"OK" : @"FAILED", (GFMonotonicMicros() - t0) / 1000.0, d ? gf_dtls_fingerprint(d) : "-");
     if (d) gf_dtls_destroy(d);
-    // SPS of a 1024x768 stream (High profile) - picture size parsing
-    static const uint8_t sps[] = { 0x67, 0x64, 0x00, 0x1f, 0xac, 0xd9, 0x40, 0x80, 0x0c, 0x1e, 0x9a, 0x80, 0x82, 0x83, 0x02, 0x83, 0x68, 0x50, 0x9a, 0x80 };
+    // an x264 High-profile SPS of a 1280x720 stream (with an emulation prevention byte inside) - picture size parsing
+    static const uint8_t sps[] = { 0x67, 0x64, 0x00, 0x1f, 0xac, 0xd9, 0x40, 0x50, 0x05, 0xbb, 0x01, 0x10, 0x00, 0x00, 0x03, 0x00, 0x10, 0x00, 0x00, 0x03, 0x03, 0xc0, 0xf1, 0x83, 0x19, 0x60 };
     int w = 0, h = 0;
-    int ok = gf_h264_sps_dimensions(sps, sizeof(sps), &w, &h);
-    GFLog(@"Self test: SPS parse %@ (%dx%d)", ok ? @"OK" : @"FAILED", w, h);
+    int ok = gf_h264_sps_dimensions(sps, sizeof(sps), &w, &h) && w == 1280 && h == 720;
+    GFLog(@"Self test: SPS parse %@ (%dx%d, expected 1280x720)", ok ? @"OK" : @"FAILED", w, h);
     GFLog(@"Self test: VideoToolbox %@", [GFVideoDecoder isAvailable] ? @"available" : @"MISSING");
 }
 
