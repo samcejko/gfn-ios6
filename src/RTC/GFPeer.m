@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -75,6 +76,7 @@ typedef enum { GFPeerStateNew, GFPeerStateChecking, GFPeerStateConnected, GFPeer
     GFPeerState _state;
     uint64_t _start_us;
     uint32_t _localIp;
+    uint32_t _serverIp;
     uint16_t _localPort;
     // ICE
     ice_candidate _cands[MAX_CANDIDATES];
@@ -233,6 +235,22 @@ static uint32_t parse_ipv4(NSString *s)
     return ntohl(a.s_addr);
 }
 
+// A dotted address, an Alliance host that encodes one, or a name looked up in DNS (blocking; network thread only)
+static uint32_t resolve_ipv4(NSString *host)
+{
+    if (!host.length) return 0;
+    uint32_t ip = parse_ipv4([GFSDP publicIPFromHost:host]);
+    if (ip) return ip;
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    if (getaddrinfo([host UTF8String], NULL, &hints, &res) != 0 || !res) return 0;
+    ip = ntohl(((struct sockaddr_in *)res->ai_addr)->sin_addr.s_addr);
+    freeaddrinfo(res);
+    return ip;
+}
+
 - (void)addCandidateIp:(uint32_t)ip port:(uint16_t)port
 {
     if (!ip || !port || ip == 0x7f000001u) return;
@@ -253,10 +271,8 @@ static uint32_t parse_ipv4(NSString *s)
     if (parts.count < 6) return;
     if ([[parts[2] lowercaseString] isEqualToString:@"tcp"]) return;
     uint32_t ip = parse_ipv4(parts[4]);
-    if (!ip) {
-        NSString *resolved = [GFSDP publicIPFromHost:parts[4]];
-        ip = parse_ipv4(resolved);
-    }
+    if (!ip) ip = resolve_ipv4(parts[4]);
+    if (!ip) ip = _serverIp;      // the offer's 0.0.0.0 placeholders mean the seat itself
     [self addCandidateIp:ip port:(uint16_t)[parts[5] integerValue]];
 }
 
@@ -287,8 +303,10 @@ static uint32_t parse_ipv4(NSString *s)
     fcntl(_fd, F_SETFL, fcntl(_fd, F_GETFL, 0) | O_NONBLOCK);
     if (pipe(_wake) != 0) return NO;
     fcntl(_wake[0], F_SETFL, fcntl(_wake[0], F_GETFL, 0) | O_NONBLOCK);
-    uint32_t serverIp = parse_ipv4([GFSDP publicIPFromHost:self.session.serverIp]);
-    _localIp = local_ip_toward(serverIp);
+    _serverIp = resolve_ipv4(self.session.serverIp);
+    if (!_serverIp) _serverIp = resolve_ipv4(self.session.mediaIp);
+    if (!_serverIp) GFLog(@"Peer: could not resolve the seat host %@", self.session.serverIp);
+    _localIp = local_ip_toward(_serverIp);
     return YES;
 }
 
@@ -340,7 +358,7 @@ static int sctp_send_cb(void *ctx, const uint8_t *pkt, size_t len)
         // remote candidates known up front: the offer's and the media host of the session
         for (NSString *c in self.offer.candidates) [self addCandidateString:c];
         if (self.session.mediaPort) {
-            uint32_t ip = parse_ipv4([GFSDP publicIPFromHost:self.session.mediaIp]) ?: parse_ipv4([GFSDP publicIPFromHost:self.session.serverIp]);
+            uint32_t ip = resolve_ipv4(self.session.mediaIp) ?: _serverIp;
             [self addCandidateIp:ip port:(uint16_t)self.session.mediaPort];
         }
 
