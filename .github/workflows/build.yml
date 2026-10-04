@@ -168,6 +168,23 @@ jobs:
             grep -c "_memcpy" "$LIBC"
           fi
 
+      - name: Syntax check (every error of our own sources in one go)
+        run: |
+          export PATH="$THEOS/toolchain/linux/iphone/bin:$THEOS/bin:$PATH"
+          SDK="$THEOS/sdks/iPhoneOS9.3.sdk"
+          FLAGS="-arch armv7 -miphoneos-version-min=6.0 -isysroot $SDK -fsyntax-only -w -ferror-limit=0 \
+                 -Isrc -Isrc/Net -Isrc/GFN -Isrc/RTC -Isrc/Media -Isrc/UI -Isrc/Util \
+                 -Ivendor -Ivendor/mbedtls/include -Ivendor/mbedtls/library -Ivendor/opus/include -Ivendor/qrcodegen \
+                 -DOPUS_BUILD -DFIXED_POINT=1 -DDISABLE_FLOAT_API"
+          status=0
+          for f in $(find src -name '*.m' | sort); do
+            clang $FLAGS -fobjc-arc -x objective-c "$f" 2>&1 | grep -E 'error:' && status=1
+          done
+          for f in $(find src -name '*.c' | sort); do
+            clang $FLAGS -x c "$f" 2>&1 | grep -E 'error:' && status=1
+          done
+          if [ $status -ne 0 ]; then echo "SYNTAX CHECK FOUND ERRORS (see above)"; else echo "syntax check clean"; fi
+
       - name: Build
         run: |
           set -o pipefail

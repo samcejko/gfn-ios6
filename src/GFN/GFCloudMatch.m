@@ -205,7 +205,7 @@ static BOOL GFIsZoneHost(NSString *host)
             if (!ok || !ids.count) { completion(); return; }
             [self waitForClear:check + 1 completion:completion];
         }];
-    }];
+    });
 }
 
 #pragma mark - Create
