@@ -35,8 +35,10 @@ input format.
 
 ## Installing on the device
 
-Grab the IPA or DEB from the Releases page. The IPA installs with `ipainstaller -f GFN6-<version>.ipa` (AppSync
-Unified required); the DEB with `dpkg -i` followed by `su mobile -c uicache`. Do not keep both installed at once.
+Install the **DEB** (`dpkg -i`, then `su mobile -c uicache`). It has to be the DEB, not the IPA: the DEB installs
+into `/Applications`, where the app may open the hardware H.264 decoder. An IPA installed into the app container is
+sandboxed away from the decoder (`sandboxd` denies `iokit-open AppleVXD390UserClient`) and shows a black screen,
+so the IPA is only useful for the non-video screens. Do not keep both installed at once.
 
 ## Building
 

@@ -49,23 +49,34 @@ function Copy-FromIPad {
 }
 
 function Install-IPadPackage {
+    # GFN6 needs the DEB (install into /Applications) so the hardware video decoder is allowed by the sandbox;
+    # the container IPA install is denied iokit-open AppleVXD390UserClient and shows a black screen. Pass -DebPath.
+    # Giving only -IpaPath still works but video will not decode - a warning is printed.
     param([string]$IpaPath, [string]$DebPath, [string]$IPadHost = $script:IPadDefaultHost)
     $installed = $false
     Invoke-IPad -IPadHost $IPadHost -Command 'killall GFN6 2>/dev/null; echo stopped' | Out-Null
-    if ($IpaPath -and (Test-Path $IpaPath)) {
+    # Prefer the DEB. When given a run folder's IPA, use the DEB sitting next to it.
+    if (-not $DebPath -and $IpaPath) {
+        $sibling = Join-Path (Split-Path $IpaPath) 'com.samcejko.gfn6_*.deb'
+        $found = Get-ChildItem $sibling -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) { $DebPath = $found.FullName; $IpaPath = ''; Write-Host "Using the DEB next to the IPA (needed for the video decoder): $DebPath" }
+    }
+    if ($DebPath -and (Test-Path $DebPath)) {
+        Write-Host "Installing DEB $DebPath (into /Applications) ..."
+        Invoke-IPad -IPadHost $IPadHost -Command 'ipainstaller -u com.samcejko.gfn6 2>/dev/null; echo ok' | Out-Null
+        Copy-ToIPad -LocalPath $DebPath -RemotePath '/tmp/GFN6.deb' -IPadHost $IPadHost
+        $out = Invoke-IPad -IPadHost $IPadHost -Command 'dpkg -i /tmp/GFN6.deb 2>&1; su mobile -c uicache 2>/dev/null; echo DEB_OK' | Out-String
+        Write-Host $out
+        if ($out -match 'DEB_OK') { $installed = $true }
+    }
+    if (-not $installed -and $IpaPath -and (Test-Path $IpaPath)) {
+        Write-Host "WARNING: installing the IPA into the app container - the hardware video decoder will be blocked (black screen). Install the DEB instead."
         Write-Host "Installing IPA $IpaPath ..."
         Copy-ToIPad -LocalPath $IpaPath -RemotePath '/tmp/GFN6.ipa' -IPadHost $IPadHost
         $out = Invoke-IPad -IPadHost $IPadHost -Command 'if command -v ipainstaller >/dev/null 2>&1; then ipainstaller -f /tmp/GFN6.ipa; echo "IPA_EXIT=$?"; elif command -v appinst >/dev/null 2>&1; then appinst /tmp/GFN6.ipa; echo "IPA_EXIT=$?"; else echo NO_INSTALLER; fi' | Out-String
         Write-Host $out
         # ipainstaller's exit code is not reliable; trust its own success message as well.
         if ($out -match 'IPA_EXIT=0' -or $out -match '(?i)installed .* successfully') { $installed = $true }
-    }
-    if (-not $installed -and $DebPath -and (Test-Path $DebPath)) {
-        Write-Host "Installing DEB $DebPath (falls back to /Applications) ..."
-        Copy-ToIPad -LocalPath $DebPath -RemotePath '/tmp/GFN6.deb' -IPadHost $IPadHost
-        $out = Invoke-IPad -IPadHost $IPadHost -Command 'dpkg -i /tmp/GFN6.deb 2>&1 && { uicache 2>/dev/null; echo DEB_OK; }' | Out-String
-        Write-Host $out
-        if ($out -match 'DEB_OK') { $installed = $true }
     }
     if (-not $installed) { throw "Nothing installed" }
     Write-Host "Done. Tap the GFN6 icon on the iPad."
@@ -97,9 +108,13 @@ function Get-GFN6Log {
     Invoke-IPad -IPadHost $IPadHost -Command "grep '\[GFN6\]' /var/log/syslog | sed -e :a -e '`$q;N;$($Lines + 1),`$D;ba'"
 }
 
-# The app's sandbox folder on the iPad (it changes with a reinstall)
+# The app's home folder on the iPad. GFN6 must be installed as the DEB (in /Applications) so the hardware video
+# decoder works; a /Applications app's home is /var/mobile. (A container IPA install would be under
+# /var/mobile/Applications/<uuid>, kept as a fallback.)
 function Get-IPadAppContainer {
     param([string]$IPadHost = $script:IPadDefaultHost)
+    $sys = (Invoke-IPad -IPadHost $IPadHost -Command "test -d /Applications/GFN6.app && echo yes" | Out-String).Trim()
+    if ($sys -eq 'yes') { return '/var/mobile' }
     $out = (Invoke-IPad -IPadHost $IPadHost -Command "ls -d /var/mobile/Applications/*/GFN6.app 2>/dev/null | sed -n '1p'" | Out-String).Trim()
     if (-not $out) { throw 'GFN6 is not installed on the iPad' }
     $out -replace '/GFN6\.app$', ''
