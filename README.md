@@ -35,7 +35,11 @@ input format.
 
 ## Installing on the device
 
-Install the **DEB** (`dpkg -i`, then `su mobile -c uicache`). It has to be the DEB, not the IPA: the DEB installs
+The easy way: add the Cydia repository `http://samcejko.eu/repo/` (Cydia → Sources → Edit → Add) and install GFN6
+from there; updates then come through Cydia. The app is free; if it is useful to you, you can support the development
+at [ko-fi.com/samcejko](https://ko-fi.com/samcejko).
+
+By hand: install the **DEB** (`dpkg -i`, then `su mobile -c uicache`). It has to be the DEB, not the IPA: the DEB installs
 into `/Applications`, where the app may open the hardware H.264 decoder. An IPA installed into the app container is
 sandboxed away from the decoder (`sandboxd` denies `iokit-open AppleVXD390UserClient`) and shows a black screen,
 so the IPA is only useful for the non-video screens. Do not keep both installed at once.

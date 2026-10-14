@@ -90,7 +90,7 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
         case SecControls: return ControlsRowCount;
         case SecAppearance: return 1;
         case SecNetwork: return 1;
-        case SecAbout: return 2;
+        case SecAbout: return 3;
     }
     return 0;
 }
@@ -230,8 +230,12 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
             cell.textLabel.text = L(@"Version");
             cell.detailTextLabel.text = [GFUtils appVersion];
             cell.selectionStyle = UITableViewCellSelectionStyleNone;
-        } else {
+        } else if (r == 1) {
             cell.textLabel.text = L(@"Open-source licenses");
+            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        } else {
+            cell.textLabel.text = L(@"Support the development");
+            cell.detailTextLabel.text = @"ko-fi.com/samcejko";
             cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         }
     }
@@ -314,6 +318,10 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
                 [self.tableView reloadData];
             }];
         }
+        return;
+    }
+    if (s == SecAbout && r == 2) {
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://ko-fi.com/samcejko"]];
         return;
     }
     if (s == SecAbout && r == 1) {
