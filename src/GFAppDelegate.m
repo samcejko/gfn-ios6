@@ -8,6 +8,7 @@
 #import "GFAuth.h"
 #import "GFTheme.h"
 #import "GFUtils.h"
+#import "GFModern.h"
 #import "GFCommon.h"
 #import "GFVideoDecoder.h"
 #include "gf_srtp.h"
@@ -111,6 +112,8 @@ static UIViewController *GFTopController(UIViewController *root)
     signal(SIGPIPE, SIG_IGN);
     [GFSettings registerDefaults];
     GFLog(@"GFN6 %@ starting on %@ (iOS %@)", [GFUtils appVersion], [GFUtils deviceModel], [UIDevice currentDevice].systemVersion);
+    // iOS 7 and newer (the arm64 build): the iOS 6 look of the bars, full-screen modals; nothing on iOS 6
+    GFModernSetUp([[GFTheme shared] barStyle]);
     [GFTLSSocket warmUp];
     [[GFImageLoader shared] pruneDisk];
     [GFAuth shared];

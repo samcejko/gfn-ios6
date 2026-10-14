@@ -91,6 +91,7 @@ static OSStatus GFAudioRender(void *inRefCon, AudioUnitRenderActionFlags *ioActi
     GFAudioPlayer *self = (__bridge GFAudioPlayer *)inRefCon;
     int16_t *out = ioData->mBuffers[0].mData;
     uint32_t w = self->_ringWrite, r = self->_ringRead;
+    __sync_synchronize();   // (the samples written before the index became visible: arm64 reorders otherwise)
     uint32_t available = (w + RING_FRAMES - r) % RING_FRAMES;
     uint32_t n = inNumberFrames < available ? inNumberFrames : available;
     for (uint32_t i = 0; i < n; i++) {
@@ -102,6 +103,7 @@ static OSStatus GFAudioRender(void *inRefCon, AudioUnitRenderActionFlags *ioActi
         memset(out + 2 * n, 0, (inNumberFrames - n) * CHANNELS * sizeof(int16_t));
         if (available == 0) self->_underruns++;
     }
+    __sync_synchronize();
     self->_ringRead = (r + n) % RING_FRAMES;
     return noErr;
 }
@@ -259,6 +261,7 @@ static void *GFAudioThread(void *arg)
     }
     _fadeFrames += (uint32_t)frames;
     uint32_t w = _ringWrite, r = _ringRead;
+    __sync_synchronize();
     uint32_t buffered = (w + RING_FRAMES - r) % RING_FRAMES;
     if (buffered > (uint32_t)(SAMPLE_RATE * MAX_BUFFER_MS / 1000)) return;   // running long: drop this 10 ms
     if (buffered + (uint32_t)frames >= RING_FRAMES - 1) return;
@@ -267,6 +270,7 @@ static void *GFAudioThread(void *arg)
         _ring[2 * idx] = pcm[2 * i];
         _ring[2 * idx + 1] = pcm[2 * i + 1];
     }
+    __sync_synchronize();   // (the samples before the index: the render callback on the other core reads them in that order)
     _ringWrite = (w + (uint32_t)frames) % RING_FRAMES;
 }
 

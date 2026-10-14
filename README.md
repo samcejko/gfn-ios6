@@ -1,6 +1,8 @@
 # GFN6 - GeForce NOW on iOS 6
 
-An unofficial GeForce NOW client for jailbroken iOS 6.x devices (iPad 2 and up, iPhone 4S and up). It signs in to
+An unofficial GeForce NOW client for jailbroken iOS 6.x devices (iPad 2 and up, iPhone 4S and up) and, as a second
+build of the same sources, for 64-bit devices with iOS 14–17 (iPhone X and newer: rootless jailbreaks and
+TrollStore). It signs in to
 your NVIDIA account, shows your game library, waits in NVIDIA's queue and streams the game over a WebRTC
 connection built from scratch for a 2012 phone: hardware H.264 decoding, Opus audio, a touch gamepad, mouse mode
 and a keyboard.
@@ -44,12 +46,21 @@ into `/Applications`, where the app may open the hardware H.264 decoder. An IPA 
 sandboxed away from the decoder (`sandboxd` denies `iokit-open AppleVXD390UserClient`) and shows a black screen,
 so the IPA is only useful for the non-video screens. Do not keep both installed at once.
 
+On iOS 14–17 (64-bit): with a rootless jailbreak add the same repository in Sileo or Zebra, or install the
+`iphoneos-arm64` `.deb` with `dpkg -i` (it goes into `/var/jb/Applications`); without a jailbreak open
+`GFN6-<version>-arm64.ipa` in [TrollStore](https://github.com/opa334/TrollStore) - there the public VideoToolbox
+decodes inside the sandbox, so the IPA plays video too. Not tried on a device yet.
+
 ## Building
 
-There is no Mac involved: GitHub Actions builds the app with Theos, the iOS 9.3 SDK and a Linux clang toolchain
-(`.github/workflows/build.yml`), fetching Mbed TLS, libopus and the QR encoder on the fly. Push a commit and download
-the `GFN6-packages` artifact. The scripts in `tools/` push through the GitHub API, wait for the build, install over
-SSH and drive the app for screenshots (see `CONTRIBUTING.md`).
+There is no Mac involved: GitHub Actions builds the app with Theos and a Linux clang toolchain
+(`.github/workflows/build.yml`), fetching Mbed TLS, libopus and the QR encoder on the fly, twice from one source
+tree: armv7 for iOS 6 (the iOS 9.3 SDK, deployment target 6.0; the `GFN6-packages` artifact) and, with
+`make package THEOS_PACKAGE_SCHEME=rootless`, arm64 for iOS 14–17 (the iOS 16.5 SDK, deployment target 14.0; the
+`GFN6-packages-arm64` artifact: the `.deb` for rootless jailbreaks, the `-arm64.ipa` for TrollStore). The differences
+live in `src/Util/GFModern.m` and `tools/modern_bundle.py`. The scripts in `tools/` push through the GitHub API, wait
+for the build, fetch both packages, install over SSH (the iPad with `-Install`, the iPhone's arm64 `.deb` with
+`-InstallIPhone`) and drive the app for screenshots (see `CONTRIBUTING.md`).
 
 ## Project layout
 

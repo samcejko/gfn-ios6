@@ -8,6 +8,7 @@
 #import "GFSettings.h"
 #import "GFTheme.h"
 #import "GFUtils.h"
+#import "GFModern.h"
 #import "GFCommon.h"
 
 @interface GFLibraryViewController () <UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UISearchBarDelegate>
@@ -119,6 +120,16 @@
 {
     [super viewDidLayoutSubviews];
     CGRect b = self.view.bounds;
+    // the search bar says how tall it wants to be (44 on iOS 6, more on iOS 11+); the grid follows, and keeps its
+    // cards clear of the notch in landscape
+    CGFloat barH = ceil([self.searchBar sizeThatFits:CGSizeMake(b.size.width, 0)].height);
+    if (barH < 44) barH = 44;
+    self.searchBar.frame = CGRectMake(0, 0, b.size.width, barH);
+    self.grid.frame = CGRectMake(0, barH, b.size.width, b.size.height - barH);
+    UIEdgeInsets safe = GFSafeAreaInsets(self.view);
+    UICollectionViewFlowLayout *layout = (UICollectionViewFlowLayout *)self.grid.collectionViewLayout;
+    UIEdgeInsets inset = UIEdgeInsetsMake(10, 10 + safe.left, 10, 10 + safe.right);
+    if (!UIEdgeInsetsEqualToEdgeInsets(layout.sectionInset, inset)) { layout.sectionInset = inset; [layout invalidateLayout]; }
     self.spinner.center = CGPointMake(b.size.width / 2, b.size.height / 2 - 30);
     self.messageLabel.frame = CGRectMake(30, b.size.height / 2 - 80, b.size.width - 60, 100);
     self.actionButton.center = CGPointMake(b.size.width / 2, b.size.height / 2 + 50);
@@ -327,7 +338,8 @@
 
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)layout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    return [GFGameCell cellSizeForWidth:collectionView.bounds.size.width];
+    UIEdgeInsets safe = GFSafeAreaInsets(collectionView);
+    return [GFGameCell cellSizeForWidth:collectionView.bounds.size.width - safe.left - safe.right];
 }
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath

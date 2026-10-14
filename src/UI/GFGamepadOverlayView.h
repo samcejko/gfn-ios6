@@ -6,5 +6,6 @@
 @interface GFGamepadOverlayView : UIView
 @property (nonatomic, copy) void (^onChange)(GFGamepadState state);
 @property (nonatomic) CGFloat controlOpacity;        // 0.2..0.9
+@property (nonatomic) UIEdgeInsets safeInsets;       // the notch's sides and the home indicator on iOS 11+ (the controls keep clear); zero elsewhere
 @property (nonatomic, readonly) GFGamepadState state;
 @end

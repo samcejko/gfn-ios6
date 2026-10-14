@@ -10,6 +10,7 @@
 #import "GFSettings.h"
 #import "GFTheme.h"
 #import "GFUtils.h"
+#import "GFModern.h"
 #import "GFCommon.h"
 
 // A view that takes keyboard input and forwards it as key presses
@@ -193,15 +194,24 @@
 {
     [super viewDidLayoutSubviews];
     CGFloat w = self.view.bounds.size.width, h = self.view.bounds.size.height;
+    UIEdgeInsets safe = GFSafeAreaInsets(self.view);   // the notch (iOS 11+), else zero
+    self.gamepad.safeInsets = safe;
     self.spinner.center = CGPointMake(w / 2, h / 2);
     CGSize s = [self.statusLabel.text sizeWithFont:self.statusLabel.font constrainedToSize:CGSizeMake(w - 80, 120)];
     self.statusLabel.frame = CGRectMake((w - s.width - 24) / 2, h / 2 + 40, s.width + 24, s.height + 12);
-    self.menuButton.frame = CGRectMake(w / 2 - 16, 6, 32, 32);
-    CGSize st = [self.statsLabel.text sizeWithFont:self.statsLabel.font constrainedToSize:CGSizeMake(w / 2, 200)];
-    self.statsLabel.frame = CGRectMake(w / 2 + 30, 6, st.width + 10, st.height + 6);
+    self.menuButton.frame = CGRectMake(w / 2 - 16, safe.top + 6, 32, 32);
+    CGSize st = [self.statsLabel.text sizeWithFont:self.statsLabel.font constrainedToSize:CGSizeMake(w / 2 - safe.right - 40, 200)];
+    self.statsLabel.frame = CGRectMake(w / 2 + 30, safe.top + 6, st.width + 10, st.height + 6);
     CGSize ts = [self.toastLabel.text sizeWithFont:self.toastLabel.font constrainedToSize:CGSizeMake(w - 80, 100)];
-    self.toastLabel.frame = CGRectMake((w - ts.width - 30) / 2, 50, ts.width + 30, ts.height + 14);
+    self.toastLabel.frame = CGRectMake((w - ts.width - 30) / 2, safe.top + 50, ts.width + 30, ts.height + 14);
 }
+
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+// iOS 11 and newer: a swipe from an edge is the game's first (a second one goes to the system), and the home
+// indicator fades away over the picture
+- (UIRectEdge)preferredScreenEdgesDeferringSystemGestures { return UIRectEdgeAll; }
+- (BOOL)prefersHomeIndicatorAutoHidden { return YES; }
+#endif
 
 - (void)viewDidAppear:(BOOL)animated
 {

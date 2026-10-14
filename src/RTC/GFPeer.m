@@ -96,7 +96,8 @@ typedef enum { GFPeerStateNew, GFPeerStateChecking, GFPeerStateConnected, GFPeer
     // media
     gf_h264_depack _depack;
     uint32_t _ourSsrc, _videoSsrc, _audioSsrc;
-    uint32_t _lastSr, _lastSrTime_us;
+    uint32_t _lastSr;
+    uint64_t _lastSrTime_us;   // (the monotonic clock in microseconds: 64-bit, or it wraps after 71 minutes)
     uint16_t _highestSeq;
     uint32_t _seqCycles;
     int _haveSeq;

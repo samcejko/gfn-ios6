@@ -43,6 +43,13 @@ typedef struct {
 
 #pragma mark - Layout
 
+- (void)setSafeInsets:(UIEdgeInsets)safeInsets
+{
+    if (UIEdgeInsetsEqualToEdgeInsets(safeInsets, _safeInsets)) return;
+    _safeInsets = safeInsets;
+    [self setNeedsLayout];
+}
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];
@@ -50,22 +57,24 @@ typedef struct {
     _scale = MIN(1.0, MIN(w, h) / 700.0);
     if (_scale < 0.55) _scale = 0.55;
     CGFloat s = _scale;
+    // the controls stay out of the notch's sides, the rounded corners and the home indicator (iOS 11+)
+    CGFloat left = self.safeInsets.left, right = self.safeInsets.right, top = self.safeInsets.top, bottom = self.safeInsets.bottom;
     CGFloat stickR = 70 * s, knobR = 30 * s;
     (void)knobR;
     // sticks in the bottom corners
-    _geom[CtlLeftStick].center = CGPointMake(120 * s, h - 120 * s);
+    _geom[CtlLeftStick].center = CGPointMake(left + 120 * s, h - bottom - 120 * s);
     _geom[CtlLeftStick].radius = stickR;
-    _geom[CtlRightStick].center = CGPointMake(w - 120 * s, h - 120 * s);
+    _geom[CtlRightStick].center = CGPointMake(w - right - 120 * s, h - bottom - 120 * s);
     _geom[CtlRightStick].radius = stickR;
     for (int c = CtlLeftStick; c <= CtlRightStick; c++) {
         _geom[c].frame = CGRectMake(_geom[c].center.x - stickR * 1.4, _geom[c].center.y - stickR * 1.4, stickR * 2.8, stickR * 2.8);
     }
     // D-pad above the left stick, ABXY above the right stick
     CGFloat dpadR = 62 * s;
-    _geom[CtlDpad].center = CGPointMake(120 * s, h - 300 * s);
+    _geom[CtlDpad].center = CGPointMake(left + 120 * s, h - bottom - 300 * s);
     _geom[CtlDpad].radius = dpadR;
     _geom[CtlDpad].frame = CGRectMake(_geom[CtlDpad].center.x - dpadR, _geom[CtlDpad].center.y - dpadR, dpadR * 2, dpadR * 2);
-    CGPoint cluster = CGPointMake(w - 120 * s, h - 300 * s);
+    CGPoint cluster = CGPointMake(w - right - 120 * s, h - bottom - 300 * s);
     CGFloat br = 28 * s, gap = 50 * s;
     CGPoint centers[4] = { CGPointMake(cluster.x, cluster.y + gap), CGPointMake(cluster.x + gap, cluster.y), CGPointMake(cluster.x - gap, cluster.y), CGPointMake(cluster.x, cluster.y - gap) };
     GFControl buttons[4] = { CtlA, CtlB, CtlX, CtlY };
@@ -76,14 +85,14 @@ typedef struct {
     }
     // bumpers and triggers in the top corners
     CGFloat bw = 100 * s, bh = 38 * s;
-    _geom[CtlLB].frame = CGRectMake(24 * s, 70 * s, bw, bh);
-    _geom[CtlLT].frame = CGRectMake(24 * s, 24 * s, bw, bh);
-    _geom[CtlRB].frame = CGRectMake(w - 24 * s - bw, 70 * s, bw, bh);
-    _geom[CtlRT].frame = CGRectMake(w - 24 * s - bw, 24 * s, bw, bh);
+    _geom[CtlLB].frame = CGRectMake(left + 24 * s, top + 70 * s, bw, bh);
+    _geom[CtlLT].frame = CGRectMake(left + 24 * s, top + 24 * s, bw, bh);
+    _geom[CtlRB].frame = CGRectMake(w - right - 24 * s - bw, top + 70 * s, bw, bh);
+    _geom[CtlRT].frame = CGRectMake(w - right - 24 * s - bw, top + 24 * s, bw, bh);
     // back / start at the bottom middle
     CGFloat pw = 72 * s, ph = 32 * s;
-    _geom[CtlBack].frame = CGRectMake(w / 2 - pw - 12 * s, h - 20 * s - ph, pw, ph);
-    _geom[CtlStart].frame = CGRectMake(w / 2 + 12 * s, h - 20 * s - ph, pw, ph);
+    _geom[CtlBack].frame = CGRectMake(w / 2 - pw - 12 * s, h - bottom - 20 * s - ph, pw, ph);
+    _geom[CtlStart].frame = CGRectMake(w / 2 + 12 * s, h - bottom - 20 * s - ph, pw, ph);
     for (int c = CtlLB; c < CtlCount; c++) {
         _geom[c].center = CGPointMake(CGRectGetMidX(_geom[c].frame), CGRectGetMidY(_geom[c].frame));
         _geom[c].radius = 0;

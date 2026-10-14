@@ -24,9 +24,9 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.1</string>
+	<string>0.2.0</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>iPhoneOS</string>
@@ -73,6 +73,11 @@
 		<string>Icon-Small@2x.png</string>
 		<string>Icon-Small-50.png</string>
 		<string>Icon-Small-50@2x.png</string>
+		<string>Icon-60@2x.png</string>
+		<string>Icon-60@3x.png</string>
+		<string>Icon-76.png</string>
+		<string>Icon-76@2x.png</string>
+		<string>Icon-83.5@2x.png</string>
 	</array>
 	<key>CFBundleIcons</key>
 	<dict>
@@ -88,6 +93,11 @@
 				<string>Icon-Small@2x.png</string>
 				<string>Icon-Small-50.png</string>
 				<string>Icon-Small-50@2x.png</string>
+				<string>Icon-60@2x.png</string>
+				<string>Icon-60@3x.png</string>
+				<string>Icon-76.png</string>
+				<string>Icon-76@2x.png</string>
+				<string>Icon-83.5@2x.png</string>
 			</array>
 			<key>UIPrerenderedIcon</key>
 			<true/>
@@ -105,6 +115,16 @@
 				<string>gfn6</string>
 			</array>
 		</dict>
+	</array>
+	<!-- iOS 7 and newer (the arm64 build): light mode only (the app has its own looks), the whole iPad screen as on iOS 6 -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<!-- iOS 9 and newer answer canOpenURL: only for schemes listed here (the "Open in Surfari" chooser) -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>surfari</string>
 	</array>
 </dict>
 </plist>

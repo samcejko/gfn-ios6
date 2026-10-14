@@ -10,7 +10,8 @@ typedef CFTypeRef GFVTSessionRef;
 typedef void (*GFVTOutputCallback)(void *refcon, CFDictionaryRef frameInfo, OSStatus status, UInt32 infoFlags, CVBufferRef imageBuffer);
 typedef struct { GFVTOutputCallback callback; void *refcon; } GFVTOutputCallbackRecord;
 typedef OSStatus (*GFVTCreateFn)(CFAllocatorRef, CMFormatDescriptionRef, CFTypeRef, CFDictionaryRef, GFVTOutputCallbackRecord *, GFVTSessionRef *);
-typedef OSStatus (*GFVTDecodeFn)(GFVTSessionRef, CMSampleBufferRef, uint32_t, CFDictionaryRef, uint32_t);
+// (the last argument is VTDecodeInfoFlags *infoFlagsOut: a pointer, which matters on arm64)
+typedef OSStatus (*GFVTDecodeFn)(GFVTSessionRef, CMSampleBufferRef, uint32_t, CFDictionaryRef, uint32_t *);
 typedef void (*GFVTInvalidateFn)(GFVTSessionRef);
 typedef OSStatus (*GFVTWaitFn)(GFVTSessionRef);
 
@@ -265,13 +266,14 @@ static void GFVTOutput(void *refcon, CFDictionaryRef frameInfo, OSStatus status,
     CFRelease(block);
     if (st != 0 || !sample) { self.errors++; return; }
     uint64_t t0 = GFMonotonicMicros();
-    st = g_decode(_session, sample, 0, NULL, 0);
+    st = g_decode(_session, sample, 0, NULL, NULL);
     if (st != 0) {
         self.errors++;
         if (self.errors < 10 || self.errors % 100 == 0) GFLog(@"VideoToolbox: decode returned %d", (int)st);
         // a broken reference chain: wait for the next keyframe, and rebuild the session on repeated failures
+        // (-12903, kVTInvalidSessionErr, is what iOS 8 and newer return after the app was in the background)
         _waitingForKeyframe = YES;
-        if (st == -12911 || st == -12909 || st == -12902) { [self destroySession]; _sps = nil; }
+        if (st == -12911 || st == -12909 || st == -12902 || st == -12903) { [self destroySession]; _sps = nil; }
     } else if (g_wait) {
         g_wait(_session);
     }

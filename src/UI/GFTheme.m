@@ -1,6 +1,7 @@
 #import "GFTheme.h"
 #import "GFSettings.h"
 #import "GFUtils.h"
+#import "GFModern.h"
 #import "GFCommon.h"
 
 static UIColor *RGB(NSInteger r, NSInteger g, NSInteger b)
@@ -728,7 +729,8 @@ static UIImage *GFDrawImage(CGSize size, void (^draw)(CGContextRef ctx))
 #pragma mark - UIKit
 
 - (UIBarStyle)barStyle { return self.dark ? UIBarStyleBlack : UIBarStyleDefault; }
-- (UIStatusBarStyle)statusBarStyle { return self.dark ? UIStatusBarStyleBlackOpaque : UIStatusBarStyleDefault; }
+// (on iOS 7 and newer the status bar lies over the bar, which is dark in both looks: light text there)
+- (UIStatusBarStyle)statusBarStyle { return GFModernStatusBarStyle(self.dark ? UIStatusBarStyleBlackOpaque : UIStatusBarStyleDefault); }
 - (UIActivityIndicatorViewStyle)spinnerStyle { return self.dark ? UIActivityIndicatorViewStyleWhite : UIActivityIndicatorViewStyleGray; }
 
 - (void)applyToNavigationBar:(UINavigationBar *)bar
@@ -736,6 +738,7 @@ static UIImage *GFDrawImage(CGSize size, void (^draw)(CGContextRef ctx))
     bar.barStyle = [self barStyle];
     bar.translucent = NO;
     bar.tintColor = nil;
+    GFModernStyleNavigationBar(bar);   // iOS 7+: the glossy iOS 6 bar UIKit no longer draws
 }
 
 - (void)applyToToolbar:(UIToolbar *)bar
@@ -743,18 +746,21 @@ static UIImage *GFDrawImage(CGSize size, void (^draw)(CGContextRef ctx))
     bar.barStyle = [self barStyle];
     bar.translucent = NO;
     bar.tintColor = nil;
+    GFModernStyleToolbar(bar);
 }
 
 - (void)applyToTabBar:(UITabBar *)bar
 {
     // (the tab bar of iOS 6 is black glass in both looks; the selected tab shines blue on its own)
     bar.tintColor = nil;
+    GFModernStyleTabBar(bar);          // iOS 7+: the same black glass, drawn by the app
 }
 
 - (void)applyToTableView:(UITableView *)tableView
 {
     tableView.backgroundView = nil;
-    tableView.backgroundColor = tableView.style == UITableViewStyleGrouped ? [self backgroundColor] : [self cardColor];
+    // (grouped, or the inset grouped style iOS 13+ shows grouped tables in)
+    tableView.backgroundColor = tableView.style != UITableViewStylePlain ? [self backgroundColor] : [self cardColor];
     tableView.separatorColor = [self separatorColor];
     tableView.indicatorStyle = self.dark ? UIScrollViewIndicatorStyleWhite : UIScrollViewIndicatorStyleDefault;
 }
@@ -779,6 +785,7 @@ static UIImage *GFDrawImage(CGSize size, void (^draw)(CGContextRef ctx))
 {
     bar.barStyle = [self barStyle];
     bar.tintColor = nil;
+    GFModernStyleSearchBar(bar);
 }
 
 @end
