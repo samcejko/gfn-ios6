@@ -1,5 +1,6 @@
 #import "GFSettingsViewController.h"
 #import "GFChoiceViewController.h"
+#import "GFExternalOpen.h"
 #import "GFRootViewController.h"
 #import "GFAuth.h"
 #import "GFAPI.h"
@@ -321,7 +322,7 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
         return;
     }
     if (s == SecAbout && r == 2) {
-        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://ko-fi.com/samcejko"]];
+        [GFExternalOpen presentOpenInForURL:[NSURL URLWithString:@"https://ko-fi.com/samcejko"] from:self anchor:[tableView cellForRowAtIndexPath:indexPath]];
         return;
     }
     if (s == SecAbout && r == 1) {

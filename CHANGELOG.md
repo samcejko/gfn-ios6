@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 (2026-10-14)
+
+- The sign-in page and the Ko-fi link open through the browser chooser on iOS 6 (Safari or Surfari) and straight in
+  Safari on newer iOS; a link to YouTube, Twitch, Kick or TikTok offers the sister app when it is installed.
+- The iOS 6 package declares iOS 6.0 to 10.x (64-bit devices use the arm64 package).
+
 ## 0.2.0 (2026-10-14)
 
 - A second build for 64-bit devices with iOS 14–17 (iPhone X and newer), from the same source tree: the `.deb` with
