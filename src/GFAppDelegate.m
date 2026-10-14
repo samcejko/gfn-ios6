@@ -209,7 +209,11 @@ static UIViewController *GFTopController(UIViewController *root)
     }
     // link?url=<percent-encoded url>: what a tapped web link does (the browser chooser on iOS 6), for the tests
     if ([target isEqualToString:@"link"] && [params[@"url"] length]) {
-        [GFExternalOpen presentOpenInForURL:[NSURL URLWithString:params[@"url"]] from:top anchor:nil];
+        // (a moment later: the URL arrives before the app is active again, and newer iOS ignore openURL: and sheets then)
+        NSString *link = params[@"url"];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [GFExternalOpen presentOpenInForURL:[NSURL URLWithString:link] from:GFTopController(self.rootViewController) anchor:nil];
+        });
         return YES;
     }
     if ([target isEqualToString:@"stream"]) {
