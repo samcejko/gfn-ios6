@@ -1,5 +1,6 @@
 #import "GFAppDelegate.h"
 #import "GFRootViewController.h"
+#import "GFExternalOpen.h"
 #import "GFStreamViewController.h"
 #import "GFTLSSocket.h"
 #import "GFImageLoader.h"
@@ -204,6 +205,11 @@ static UIViewController *GFTopController(UIViewController *root)
     }
     if ([target isEqualToString:@"selftest"]) {
         [self selfTest];
+        return YES;
+    }
+    // link?url=<percent-encoded url>: what a tapped web link does (the browser chooser on iOS 6), for the tests
+    if ([target isEqualToString:@"link"] && [params[@"url"] length]) {
+        [GFExternalOpen presentOpenInForURL:[NSURL URLWithString:params[@"url"]] from:top anchor:nil];
         return YES;
     }
     if ([target isEqualToString:@"stream"]) {
