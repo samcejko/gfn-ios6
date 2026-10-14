@@ -4,8 +4,7 @@
 
 - A second build for 64-bit devices with iOS 14–17 (iPhone X and newer), from the same source tree: the `.deb` with
   `iphoneos-arm64` in its name for rootless jailbreaks (palera1n, Dopamine; it installs into `/var/jb`) and
-  `GFN6-<version>-arm64.ipa` for TrollStore, where the public VideoToolbox decodes inside the sandbox too. Not tried
-  on a device yet.
+  `GFN6-<version>-arm64.ipa` for TrollStore, where the public VideoToolbox decodes inside the sandbox too. Tried on an iPhone X with iOS 16.
 - 64-bit fixes: the VideoToolbox decode call passed its last argument as a number instead of a pointer; the audio
   ring between the decoder and the output has memory barriers; the RTCP sender-report clock is 64-bit (it wrapped
   after 71 minutes of uptime). A session iOS 8 and newer invalidate in the background is rebuilt instead of freezing.
