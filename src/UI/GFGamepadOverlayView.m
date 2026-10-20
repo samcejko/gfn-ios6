@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFGamepadOverlayView.h"
 #import "GFCommon.h"
 
@@ -257,7 +258,7 @@ typedef struct {
     for (UITouch *t in touches) {
         GFControl c = [self controlAtPoint:[t locationInView:self]];
         if (c == CtlNone) continue;
-        self.touchControl[[self keyForTouch:t]] = @(c);
+        GFLegacyDictionarySet(self.touchControl, [self keyForTouch:t], @(c));
         if (c == CtlLeftStick || c == CtlRightStick) [self applyStick:c touch:t];
         else if (c == CtlDpad) [self applyDpad:t];
         else [self setControl:c pressed:YES];
@@ -269,7 +270,7 @@ typedef struct {
 {
     BOOL any = NO;
     for (UITouch *t in touches) {
-        NSNumber *c = self.touchControl[[self keyForTouch:t]];
+        NSNumber *c = [self.touchControl objectForKey:[self keyForTouch:t]];
         if (!c) continue;
         GFControl control = (GFControl)[c intValue];
         if (control == CtlLeftStick || control == CtlRightStick) { [self applyStick:control touch:t]; any = YES; }
@@ -280,7 +281,7 @@ typedef struct {
             if (now != control && now >= CtlA) {
                 [self setControl:control pressed:NO];
                 [self setControl:now pressed:YES];
-                self.touchControl[[self keyForTouch:t]] = @(now);
+                GFLegacyDictionarySet(self.touchControl, [self keyForTouch:t], @(now));
                 any = YES;
             }
         }
@@ -291,7 +292,7 @@ typedef struct {
 - (void)endTouches:(NSSet *)touches
 {
     for (UITouch *t in touches) {
-        NSNumber *c = self.touchControl[[self keyForTouch:t]];
+        NSNumber *c = [self.touchControl objectForKey:[self keyForTouch:t]];
         if (!c) continue;
         [self setControl:(GFControl)[c intValue] pressed:NO];
         [self.touchControl removeObjectForKey:[self keyForTouch:t]];

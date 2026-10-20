@@ -44,7 +44,7 @@
         _badgeLabel.font = [theme tinyBoldFont];
         _badgeLabel.textColor = [UIColor whiteColor];
         _badgeLabel.backgroundColor = [UIColor clearColor];
-        _badgeLabel.textAlignment = NSTextAlignmentCenter;
+        _badgeLabel.textAlignment = UITextAlignmentCenter;
         _badgeLabel.hidden = YES;
         [self.contentView addSubview:_badgeLabel];
         self.selectedBackgroundView = [[UIImageView alloc] initWithImage:[theme cardBackgroundImageHighlighted]];

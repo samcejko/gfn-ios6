@@ -14,7 +14,7 @@
                            @"pl": @"pl_PL", @"ru": @"ru_RU", @"pt": @"pt_BR", @"nl": @"nl_NL", @"hu": @"hu_HU", @"sv": @"sv_SE",
                            @"da": @"da_DK", @"fi": @"fi_FI", @"nb": @"nb_NO", @"tr": @"tr_TR", @"ja": @"ja_JP", @"ko": @"ko_KR",
                            @"uk": @"uk_UA", @"th": @"th_TH" };
-    return map[code ?: @""] ?: @"en_US";
+    return [map objectForKey:code ?: @""] ?: @"en_US";
 }
 
 + (void)registerDefaults
@@ -65,7 +65,7 @@
     if (![r isEqualToString:@"native"]) {
         NSArray *parts = [r componentsSeparatedByString:@"x"];
         if (parts.count == 2) {
-            CGSize s = CGSizeMake([parts[0] integerValue], [parts[1] integerValue]);
+            CGSize s = CGSizeMake([[parts objectAtIndex:0] integerValue], [[parts objectAtIndex:1] integerValue]);
             if (s.width >= 320 && s.height >= 240) return s;
         }
     }
@@ -170,7 +170,7 @@
     if (!q.length) return;
     NSMutableArray *list = [[self recentSearches] mutableCopy];
     for (NSInteger i = (NSInteger)list.count - 1; i >= 0; i--) {
-        if ([list[(NSUInteger)i] caseInsensitiveCompare:q] == NSOrderedSame) [list removeObjectAtIndex:(NSUInteger)i];
+        if ([[list objectAtIndex:(NSUInteger)i] caseInsensitiveCompare:q] == NSOrderedSame) [list removeObjectAtIndex:(NSUInteger)i];
     }
     [list insertObject:q atIndex:0];
     while (list.count > 15) [list removeLastObject];

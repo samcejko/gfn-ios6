@@ -191,9 +191,9 @@ static const uint16_t kLetterScancodes[26] = { 0x1E, 0x30, 0x2E, 0x20, 0x12, 0x2
                    @"pageup": @[@0x21, @0x49], @"pagedown": @[@0x22, @0x51], @"delete": @[@0x2E, @0x53], @"insert": @[@0x2D, @0x52],
                    @"capslock": @[@0x14, @0x3A], @"win": @[@0x5B, @0x5B], @"menu": @[@0x5D, @0x5D] };
     });
-    NSArray *v = table[[name lowercaseString]];
+    NSArray *v = [table objectForKey:[name lowercaseString]];
     GFKeyStroke k = { 0, 0, 0 };
-    if (v) { k.keycode = [v[0] unsignedShortValue]; k.scancode = [v[1] unsignedShortValue]; }
+    if (v) { k.keycode = [[v objectAtIndex:0] unsignedShortValue]; k.scancode = [[v objectAtIndex:1] unsignedShortValue]; }
     return k;
 }
 

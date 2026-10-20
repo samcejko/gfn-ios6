@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFTheme.h"
 #import "GFSettings.h"
 #import "GFUtils.h"
@@ -143,10 +144,10 @@ static UIImage *GFDrawImage(CGSize size, void (^draw)(CGContextRef ctx))
 
 - (UIImage *)cachedImage:(NSString *)key builder:(UIImage *(^)(void))builder
 {
-    UIImage *image = self.imageCache[key];
+    UIImage *image = [self.imageCache objectForKey:key];
     if (!image) {
         image = builder();
-        if (image) self.imageCache[key] = image;
+        if (image) GFLegacyDictionarySet(self.imageCache, key, image);
     }
     return image;
 }

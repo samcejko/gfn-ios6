@@ -166,7 +166,7 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
                 cell.textLabel.text = L(@"Resolution");
                 NSString *key = [GFSettings streamResolution];
                 NSString *title = key;
-                for (NSDictionary *o in [self resolutionOptions]) if ([o[@"key"] isEqualToString:key]) title = o[@"title"];
+                for (NSDictionary *o in [self resolutionOptions]) if ([[o objectForKey:@"key"] isEqualToString:key]) title = [o objectForKey:@"title"];
                 cell.detailTextLabel.text = title;
                 cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
                 break;
@@ -190,7 +190,7 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
                 cell.textLabel.text = L(@"Game language");
                 NSString *code = [GFSettings gameLanguage];
                 cell.detailTextLabel.text = code;
-                for (NSArray *o in [self languageOptions]) if ([o[0] isEqualToString:code]) cell.detailTextLabel.text = o[1];
+                for (NSArray *o in [self languageOptions]) if ([[o objectAtIndex:0] isEqualToString:code]) cell.detailTextLabel.text = [o objectAtIndex:1];
                 cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
                 break;
             }
@@ -291,11 +291,11 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
             NSMutableArray *titles = [NSMutableArray array];
             NSInteger selected = 0;
             for (NSUInteger i = 0; i < options.count; i++) {
-                [titles addObject:options[i][@"title"]];
-                if ([options[i][@"key"] isEqualToString:[GFSettings streamResolution]]) selected = (NSInteger)i;
+                [titles addObject:[[options objectAtIndex:i] objectForKey:@"title"]];
+                if ([[[options objectAtIndex:i] objectForKey:@"key"] isEqualToString:[GFSettings streamResolution]]) selected = (NSInteger)i;
             }
             [self pushChoice:titles subtitles:nil selected:selected title:L(@"Resolution") completion:^(NSInteger index) {
-                [GFSettings setStreamResolution:options[(NSUInteger)index][@"key"]];
+                [GFSettings setStreamResolution:[[options objectAtIndex:(NSUInteger)index] objectForKey:@"key"]];
                 [self.tableView reloadData];
             }];
         } else if (r == RowFps) {
@@ -311,11 +311,11 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
             NSMutableArray *titles = [NSMutableArray array];
             NSInteger selected = 0;
             for (NSUInteger i = 0; i < options.count; i++) {
-                [titles addObject:options[i][1]];
-                if ([options[i][0] isEqualToString:[GFSettings gameLanguage]]) selected = (NSInteger)i;
+                [titles addObject:[[options objectAtIndex:i] objectAtIndex:1]];
+                if ([[[options objectAtIndex:i] objectAtIndex:0] isEqualToString:[GFSettings gameLanguage]]) selected = (NSInteger)i;
             }
             [self pushChoice:titles subtitles:nil selected:selected title:L(@"Game language") completion:^(NSInteger index) {
-                [GFSettings setGameLanguage:options[(NSUInteger)index][0]];
+                [GFSettings setGameLanguage:[[options objectAtIndex:(NSUInteger)index] objectAtIndex:0]];
                 [self.tableView reloadData];
             }];
         }
@@ -366,14 +366,14 @@ enum { RowGamepad, RowOpacity, RowSensitivity, ControlsRowCount };
             NSMutableArray *subtitles = [NSMutableArray arrayWithObject:L(@"NVIDIA picks the zone")];
             NSInteger selected = 0;
             for (NSUInteger i = 0; i < measured.count; i++) {
-                GFRegion *r = measured[i];
+                GFRegion *r = [measured objectAtIndex:i];
                 [titles addObject:r.name];
                 [subtitles addObject:r.pingMs > 0 ? [NSString stringWithFormat:@"%ld ms", (long)r.pingMs] : (r.pingMs == 0 ? L(@"unreachable") : @"")];
                 if ([r.url isEqualToString:[GFSettings region]]) selected = (NSInteger)i + 1;
             }
             [self pushChoice:titles subtitles:subtitles selected:selected title:L(@"Server region") completion:^(NSInteger index) {
                 if (index == 0) { [GFSettings setRegion:@""]; [GFSettings setRegionName:@""]; }
-                else { GFRegion *r = measured[(NSUInteger)index - 1]; [GFSettings setRegion:r.url]; [GFSettings setRegionName:r.name]; }
+                else { GFRegion *r = [measured objectAtIndex:(NSUInteger)index - 1]; [GFSettings setRegion:r.url]; [GFSettings setRegionName:r.name]; }
                 [self.tableView reloadData];
             }];
         }];

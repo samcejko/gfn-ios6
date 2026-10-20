@@ -111,7 +111,7 @@
     [req appendString:@"Upgrade: websocket\r\nConnection: Upgrade\r\n"];
     [req appendFormat:@"Sec-WebSocket-Key: %@\r\nSec-WebSocket-Version: 13\r\n", key];
     if (self.protocols.count) [req appendFormat:@"Sec-WebSocket-Protocol: %@\r\n", [self.protocols componentsJoinedByString:@", "]];
-    for (NSString *h in self.headers) [req appendFormat:@"%@: %@\r\n", h, self.headers[h]];
+    for (NSString *h in self.headers) [req appendFormat:@"%@: %@\r\n", h, [self.headers objectForKey:h]];
     [req appendString:@"\r\n"];
     if (![self.socket writeData:[req dataUsingEncoding:NSUTF8StringEncoding] error:error]) return NO;
 

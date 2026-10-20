@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFAuth.h"
 #import "GFKeychain.h"
 #import "GFHTTP.h"
@@ -49,7 +50,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
         _refreshWaiters = [NSMutableArray array];
         NSData *data = [GFKeychain dataForKey:GFTokensKey];
         NSDictionary *saved = data ? GFDict([GFUtils JSONObjectFromData:data]) : nil;
-        if (saved[@"access_token"]) {
+        if ([saved objectForKey:@"access_token"]) {
             _tokens = [saved mutableCopy];
             [self readUserFromTokens];
             GFLog(@"Signed in as %@ (saved login)", _displayName);
@@ -60,16 +61,16 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 
 #pragma mark - State
 
-- (BOOL)isSignedIn { return self.tokens[@"access_token"] != nil; }
+- (BOOL)isSignedIn { return [self.tokens objectForKey:@"access_token"] != nil; }
 
 - (NSString *)bearerToken
 {
-    return GFStr(self.tokens[@"id_token"]) ?: GFStr(self.tokens[@"access_token"]);
+    return GFStr([self.tokens objectForKey:@"id_token"]) ?: GFStr([self.tokens objectForKey:@"access_token"]);
 }
 
 - (NSString *)streamingBaseURL
 {
-    NSString *url = GFStr(GFDict(self.tokens[@"provider"])[@"streamingServiceUrl"]);
+    NSString *url = GFStr([GFDict([self.tokens objectForKey:@"provider"]) objectForKey:@"streamingServiceUrl"]);
     if (!url.length) url = GFDefaultStreamingURL;
     if (![url hasSuffix:@"/"]) url = [url stringByAppendingString:@"/"];
     return url;
@@ -77,7 +78,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 
 - (NSString *)providerIdpId
 {
-    return GFStr(GFDict(self.tokens[@"provider"])[@"idpId"]) ?: GFDefaultIdpID;
+    return GFStr([GFDict([self.tokens objectForKey:@"provider"]) objectForKey:@"idpId"]) ?: GFDefaultIdpID;
 }
 
 - (void)saveTokens
@@ -109,12 +110,12 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
     NSString *jwt = [self bearerToken];
     NSArray *parts = [jwt componentsSeparatedByString:@"."];
     if (parts.count < 2) return;
-    NSString *b64 = [[parts[1] stringByReplacingOccurrencesOfString:@"-" withString:@"+"] stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
+    NSString *b64 = [[[parts objectAtIndex:1] stringByReplacingOccurrencesOfString:@"-" withString:@"+"] stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
     while (b64.length % 4) b64 = [b64 stringByAppendingString:@"="];
     NSDictionary *payload = GFDict([GFUtils JSONObjectFromData:[GFUtils base64Decode:b64]]);
-    self.userId = GFStr(payload[@"sub"]);
-    self.email = GFStr(payload[@"email"]);
-    NSString *name = GFStr(payload[@"preferred_username"]);
+    self.userId = GFStr([payload objectForKey:@"sub"]);
+    self.email = GFStr([payload objectForKey:@"email"]);
+    NSString *name = GFStr([payload objectForKey:@"preferred_username"]);
     if (!name.length && self.email.length) name = [self.email componentsSeparatedByString:@"@"].firstObject;
     self.displayName = name.length ? name : L(@"Player");
 }
@@ -130,32 +131,32 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 - (void)discoverProvider:(void (^)(NSDictionary *provider))completion
 {
     [GFHTTP getJSON:GFServiceURLsURL headers:@{ @"User-Agent": GFLoginUserAgent } completion:^(id json, NSInteger status, NSError *error) {
-        NSDictionary *info = GFDict(GFDict(json)[@"gfnServiceInfo"]);
-        NSArray *endpoints = GFArr(info[@"gfnServiceEndpoints"]);
+        NSDictionary *info = GFDict([GFDict(json) objectForKey:@"gfnServiceInfo"]);
+        NSArray *endpoints = GFArr([info objectForKey:@"gfnServiceEndpoints"]);
         if (error || !endpoints.count) { completion([self defaultProvider]); return; }
         NSMutableArray *providers = [NSMutableArray array];
         for (NSDictionary *ep in endpoints) {
             if (!GFDict(ep)) continue;
-            NSString *url = GFStr(ep[@"streamingServiceUrl"]);
-            if (!url.length || !GFStr(ep[@"idpId"]).length) continue;
+            NSString *url = GFStr([ep objectForKey:@"streamingServiceUrl"]);
+            if (!url.length || !GFStr([ep objectForKey:@"idpId"]).length) continue;
             if (![url hasSuffix:@"/"]) url = [url stringByAppendingString:@"/"];
-            [providers addObject:@{ @"code": GFStr(ep[@"loginProviderCode"]) ?: @"", @"displayName": GFStr(ep[@"loginProviderDisplayName"]) ?: @"",
-                                    @"idpId": GFStr(ep[@"idpId"]), @"streamingServiceUrl": url,
-                                    @"priority": @(ep[@"loginProviderPriority"] ? GFInt(ep[@"loginProviderPriority"]) : 100) }];
+            [providers addObject:@{ @"code": GFStr([ep objectForKey:@"loginProviderCode"]) ?: @"", @"displayName": GFStr([ep objectForKey:@"loginProviderDisplayName"]) ?: @"",
+                                    @"idpId": GFStr([ep objectForKey:@"idpId"]), @"streamingServiceUrl": url,
+                                    @"priority": @([ep objectForKey:@"loginProviderPriority"] ? GFInt([ep objectForKey:@"loginProviderPriority"]) : 100) }];
         }
         if (!providers.count) { completion([self defaultProvider]); return; }
         [providers sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
-            return [a[@"priority"] compare:b[@"priority"]];
+            return [[a objectForKey:@"priority"] compare:[b objectForKey:@"priority"]];
         }];
-        NSString *preferred = GFStr([GFArr(info[@"loginPreferredProviders"]) firstObject]) ?: GFStr(info[@"defaultProvider"]);
+        NSString *preferred = GFStr([GFArr([info objectForKey:@"loginPreferredProviders"]) firstObject]) ?: GFStr([info objectForKey:@"defaultProvider"]);
         NSDictionary *pick = providers.firstObject;
         for (NSDictionary *p in providers) {
-            if (preferred.length && ([p[@"displayName"] caseInsensitiveCompare:preferred] == NSOrderedSame || [p[@"code"] caseInsensitiveCompare:preferred] == NSOrderedSame)) {
+            if (preferred.length && ([[p objectForKey:@"displayName"] caseInsensitiveCompare:preferred] == NSOrderedSame || [[p objectForKey:@"code"] caseInsensitiveCompare:preferred] == NSOrderedSame)) {
                 pick = p;
                 break;
             }
         }
-        GFLog(@"Login provider: %@ (%@)", pick[@"displayName"], pick[@"streamingServiceUrl"]);
+        GFLog(@"Login provider: %@ (%@)", [pick objectForKey:@"displayName"], [pick objectForKey:@"streamingServiceUrl"]);
         completion(pick);
     }];
 }
@@ -179,19 +180,19 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
         }];
         NSDictionary *fields = @{ @"client_id": GFOAuthClientID, @"scope": GFOAuthScope, @"device_id": [GFSettings deviceId],
                                   @"display_name": [NSString stringWithFormat:@"GFN6 (%@)", GFIsPad() ? @"iPad" : @"iPhone"],
-                                  @"idp_id": provider[@"idpId"] ?: GFDefaultIdpID };
+                                  @"idp_id": [provider objectForKey:@"idpId"] ?: GFDefaultIdpID };
         [GFHTTP postForm:GFDeviceAuthorizeURL headers:headers fields:fields completion:^(id json, NSInteger status, NSError *error) {
             NSDictionary *d = GFDict(json);
-            if (error || !GFStr(d[@"device_code"]).length) {
+            if (error || !GFStr([d objectForKey:@"device_code"]).length) {
                 completion(nil, error ?: GFMakeError(GFErrorBadResponse, L(@"NVIDIA did not issue a sign-in code.")));
                 return;
             }
             GFDeviceCode *code = [[GFDeviceCode alloc] init];
-            code.deviceCode = GFStr(d[@"device_code"]);
-            code.userCode = GFStr(d[@"user_code"]) ?: @"";
-            code.verificationURL = GFStr(d[@"verification_uri_complete"]) ?: GFStr(d[@"verification_uri"]) ?: @"https://login.nvidia.com/device";
-            code.interval = MAX(1, d[@"interval"] ? GFDbl(d[@"interval"]) : 5);
-            code.expires = [NSDate dateWithTimeIntervalSinceNow:d[@"expires_in"] ? GFDbl(d[@"expires_in"]) : 600];
+            code.deviceCode = GFStr([d objectForKey:@"device_code"]);
+            code.userCode = GFStr([d objectForKey:@"user_code"]) ?: @"";
+            code.verificationURL = GFStr([d objectForKey:@"verification_uri_complete"]) ?: GFStr([d objectForKey:@"verification_uri"]) ?: @"https://login.nvidia.com/device";
+            code.interval = MAX(1, [d objectForKey:@"interval"] ? GFDbl([d objectForKey:@"interval"]) : 5);
+            code.expires = [NSDate dateWithTimeIntervalSinceNow:[d objectForKey:@"expires_in"] ? GFDbl([d objectForKey:@"expires_in"]) : 600];
             code.provider = provider;
             GFLog(@"Device code issued: %@ (poll every %.0f s)", code.userCode, code.interval);
             completion(code, nil);
@@ -205,7 +206,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
                               @"client_id": GFOAuthClientID };
     [GFHTTP postForm:GFTokenURL headers:[self loginHeaders] fields:fields completion:^(id json, NSInteger status, NSError *error) {
         NSDictionary *d = GFDict(json);
-        if (!error && GFStr(d[@"access_token"]).length) {
+        if (!error && GFStr([d objectForKey:@"access_token"]).length) {
             [self adoptTokenResponse:d provider:code.provider];
             [self fetchClientTokenWithCompletion:^{
                 GFLog(@"Signed in as %@", self.displayName);
@@ -214,7 +215,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
             }];
             return;
         }
-        NSString *oauthError = GFStr(d[@"error"]) ?: @"";
+        NSString *oauthError = GFStr([d objectForKey:@"error"]) ?: @"";
         if ([oauthError isEqualToString:@"authorization_pending"]) { completion(NO, YES, nil); return; }
         if ([oauthError isEqualToString:@"slow_down"]) { code.interval += 5; completion(NO, YES, nil); return; }
         if ([oauthError isEqualToString:@"expired_token"]) { completion(NO, NO, GFMakeError(GFErrorTimeout, L(@"The sign-in code expired. Ask for a new one."))); return; }
@@ -227,18 +228,18 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 - (void)adoptTokenResponse:(NSDictionary *)d provider:(NSDictionary *)provider
 {
     NSMutableDictionary *t = [self.tokens mutableCopy] ?: [NSMutableDictionary dictionary];
-    t[@"access_token"] = GFStr(d[@"access_token"]);
+    GFLegacyDictionarySet(t, @"access_token", GFStr([d objectForKey:@"access_token"]));
     // NVIDIA routinely leaves id_token (and the refresh token) out of a refresh answer: keep the old ones
-    if (GFStr(d[@"refresh_token"]).length) t[@"refresh_token"] = GFStr(d[@"refresh_token"]);
-    if (GFStr(d[@"id_token"]).length) t[@"id_token"] = GFStr(d[@"id_token"]);
-    double expiresIn = d[@"expires_in"] ? GFDbl(d[@"expires_in"]) : 86400;
-    t[@"expires_at"] = @([[NSDate date] timeIntervalSince1970] + expiresIn);
-    NSString *clientToken = GFStr(d[@"client_token"]);
+    if (GFStr([d objectForKey:@"refresh_token"]).length) GFLegacyDictionarySet(t, @"refresh_token", GFStr([d objectForKey:@"refresh_token"]));
+    if (GFStr([d objectForKey:@"id_token"]).length) GFLegacyDictionarySet(t, @"id_token", GFStr([d objectForKey:@"id_token"]));
+    double expiresIn = [d objectForKey:@"expires_in"] ? GFDbl([d objectForKey:@"expires_in"]) : 86400;
+    GFLegacyDictionarySet(t, @"expires_at", @([[NSDate date] timeIntervalSince1970] + expiresIn));
+    NSString *clientToken = GFStr([d objectForKey:@"client_token"]);
     if (clientToken.length) {
-        if (![clientToken isEqualToString:t[@"client_token"]]) t[@"client_token_expires_at"] = @0;   // a rotated one needs its own lifetime
-        t[@"client_token"] = clientToken;
+        if (![clientToken isEqualToString:[t objectForKey:@"client_token"]]) GFLegacyDictionarySet(t, @"client_token_expires_at", @0);   // a rotated one needs its own lifetime
+        GFLegacyDictionarySet(t, @"client_token", clientToken);
     }
-    if (provider) t[@"provider"] = provider;
+    if (provider) GFLegacyDictionarySet(t, @"provider", provider);
     self.tokens = t;
     [self readUserFromTokens];
     [self saveTokens];
@@ -248,12 +249,12 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 - (void)fetchClientTokenWithCompletion:(dispatch_block_t)completion
 {
     NSMutableDictionary *headers = [[self loginHeaders] mutableCopy];
-    headers[@"Authorization"] = [@"Bearer " stringByAppendingString:GFStr(self.tokens[@"access_token"]) ?: @""];
+    GFLegacyDictionarySet(headers, @"Authorization", [@"Bearer " stringByAppendingString:GFStr([self.tokens objectForKey:@"access_token"]) ?: @""]);
     [GFHTTP getJSON:GFClientTokenURL headers:headers completion:^(id json, NSInteger status, NSError *error) {
         NSDictionary *d = GFDict(json);
-        if (!error && GFStr(d[@"client_token"]).length && self.tokens) {
-            self.tokens[@"client_token"] = GFStr(d[@"client_token"]);
-            self.tokens[@"client_token_expires_at"] = @([[NSDate date] timeIntervalSince1970] + (d[@"expires_in"] ? GFDbl(d[@"expires_in"]) : 86400 * 30));
+        if (!error && GFStr([d objectForKey:@"client_token"]).length && self.tokens) {
+            GFLegacyDictionarySet(self.tokens, @"client_token", GFStr([d objectForKey:@"client_token"]));
+            GFLegacyDictionarySet(self.tokens, @"client_token_expires_at", @([[NSDate date] timeIntervalSince1970] + ([d objectForKey:@"expires_in"] ? GFDbl([d objectForKey:@"expires_in"]) : 86400 * 30)));
             [self saveTokens];
         }
         if (completion) completion();
@@ -264,7 +265,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 
 - (BOOL)needsRefresh
 {
-    double at = GFDbl(self.tokens[@"expires_at"]);
+    double at = GFDbl([self.tokens objectForKey:@"expires_at"]);
     return at == 0 || at - [[NSDate date] timeIntervalSince1970] < GFRefreshWindow;
 }
 
@@ -275,7 +276,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
     if (completion) [self.refreshWaiters addObject:[completion copy]];
     if (self.refreshing) return;
     self.refreshing = YES;
-    NSString *clientToken = GFStr(self.tokens[@"client_token"]);
+    NSString *clientToken = GFStr([self.tokens objectForKey:@"client_token"]);
     if (clientToken.length && self.userId.length) {
         [self postTokenForm:@{ @"grant_type": @"urn:ietf:params:oauth:grant-type:client_token", @"client_token": clientToken,
                                @"client_id": GFOAuthClientID, @"sub": self.userId } attempt:1 completion:^(NSDictionary *d, BOOL dead, NSError *error) {
@@ -290,7 +291,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 
 - (void)refreshWithRefreshToken
 {
-    NSString *refreshToken = GFStr(self.tokens[@"refresh_token"]);
+    NSString *refreshToken = GFStr([self.tokens objectForKey:@"refresh_token"]);
     if (!refreshToken.length) {
         [self finishRefresh:nil error:GFMakeError(GFErrorAuth, L(@"The saved sign-in cannot be renewed. Sign in again."))];
         return;
@@ -312,7 +313,7 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
 {
     [GFHTTP postForm:GFTokenURL headers:[self loginHeaders] fields:fields completion:^(id json, NSInteger status, NSError *error) {
         NSDictionary *d = GFDict(json);
-        if (!error && GFStr(d[@"access_token"]).length) { completion(d, NO, nil); return; }
+        if (!error && GFStr([d objectForKey:@"access_token"]).length) { completion(d, NO, nil); return; }
         if (status == 400 || status == 401) { completion(nil, YES, error); return; }
         BOOL temporary = status == 0 || status == 408 || status == 429 || status >= 500;
         if (temporary && attempt < 3) {
@@ -331,8 +332,8 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
     if (response) {
         [self adoptTokenResponse:response provider:nil];
         GFLog(@"Tokens refreshed");
-        double clientAt = GFDbl(self.tokens[@"client_token_expires_at"]);
-        if (!GFStr(self.tokens[@"client_token"]).length || clientAt - [[NSDate date] timeIntervalSince1970] < GFRefreshWindow) {
+        double clientAt = GFDbl([self.tokens objectForKey:@"client_token_expires_at"]);
+        if (!GFStr([self.tokens objectForKey:@"client_token"]).length || clientAt - [[NSDate date] timeIntervalSince1970] < GFRefreshWindow) {
             [self fetchClientTokenWithCompletion:nil];
         }
     } else if (error.code == GFErrorAuth) {
@@ -358,12 +359,12 @@ static const NSTimeInterval GFRefreshWindow = 10 * 60;
         NSMutableArray *candidates = [NSMutableArray array];
         if (GFDict(json)) {
             [candidates addObject:json];
-            [candidates addObjectsFromArray:GFArr(GFDict(json)[@"subscriptions"]) ?: @[]];
+            [candidates addObjectsFromArray:GFArr([GFDict(json) objectForKey:@"subscriptions"]) ?: @[]];
         } else if (GFArr(json)) {
             [candidates addObjectsFromArray:json];
         }
         for (id c in candidates) {
-            NSString *t = GFStr(GFDict(c)[@"membershipTier"]);
+            NSString *t = GFStr([GFDict(c) objectForKey:@"membershipTier"]);
             if (t.length) { tier = t; break; }
         }
         if (tier) {

@@ -157,8 +157,8 @@ static void GFLoadVideoToolbox(void)
             pthread_mutex_lock(&_lock);
             while (_running && !_queue.count) pthread_cond_wait(&_cond, &_lock);
             if (!_running) { pthread_mutex_unlock(&_lock); break; }
-            au = _queue[0];
-            keyframe = [_queueKeyframes[0] boolValue];
+            au = [_queue objectAtIndex:0];
+            keyframe = [[_queueKeyframes objectAtIndex:0] boolValue];
             [_queue removeObjectAtIndex:0];
             [_queueKeyframes removeObjectAtIndex:0];
             pthread_mutex_unlock(&_lock);

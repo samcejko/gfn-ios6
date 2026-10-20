@@ -75,7 +75,7 @@
 
     self.messageLabel = [[UILabel alloc] initWithFrame:CGRectInset(self.view.bounds, 30, 0)];
     self.messageLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.messageLabel.textAlignment = NSTextAlignmentCenter;
+    self.messageLabel.textAlignment = UITextAlignmentCenter;
     self.messageLabel.numberOfLines = 0;
     self.messageLabel.backgroundColor = [UIColor clearColor];
     self.messageLabel.textColor = [theme secondaryTextColor];
@@ -331,7 +331,7 @@
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
     GFGameCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"game" forIndexPath:indexPath];
-    [cell showGame:self.shown[(NSUInteger)indexPath.item]];
+    [cell showGame:[self.shown objectAtIndex:(NSUInteger)indexPath.item]];
     if (!self.ownedOnly && self.nextCursor && !self.loading && indexPath.item >= (NSInteger)self.shown.count - 12) [self loadPage];
     return cell;
 }
@@ -346,7 +346,7 @@
 {
     [collectionView deselectItemAtIndexPath:indexPath animated:YES];
     [self.searchBar resignFirstResponder];
-    GFGame *game = self.shown[(NSUInteger)indexPath.item];
+    GFGame *game = [self.shown objectAtIndex:(NSUInteger)indexPath.item];
     GFGameDetailViewController *detail = [[GFGameDetailViewController alloc] initWithGame:game];
     [self.navigationController pushViewController:detail animated:YES];
 }

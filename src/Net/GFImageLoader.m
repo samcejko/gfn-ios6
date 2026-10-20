@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFImageLoader.h"
 #import "GFHTTP.h"
 #import "GFUtils.h"
@@ -63,9 +64,9 @@ static UIImage *GFAnimatedImage(CGImageSourceRef source, size_t count, NSUIntege
             double delay = 0.1;
             CFDictionaryRef props = CGImageSourceCopyPropertiesAtIndex(source, i, NULL);
             if (props) {
-                NSDictionary *gif = GFDict(((__bridge NSDictionary *)props)[(__bridge NSString *)kCGImagePropertyGIFDictionary]);
-                NSNumber *n = gif[(__bridge NSString *)kCGImagePropertyGIFUnclampedDelayTime];
-                if (![n isKindOfClass:[NSNumber class]] || n.doubleValue <= 0) n = gif[(__bridge NSString *)kCGImagePropertyGIFDelayTime];
+                NSDictionary *gif = GFDict([((__bridge NSDictionary *)props) objectForKey:(__bridge NSString *)kCGImagePropertyGIFDictionary]);
+                NSNumber *n = [gif objectForKey:(__bridge NSString *)kCGImagePropertyGIFUnclampedDelayTime];
+                if (![n isKindOfClass:[NSNumber class]] || n.doubleValue <= 0) n = [gif objectForKey:(__bridge NSString *)kCGImagePropertyGIFDelayTime];
                 if ([n isKindOfClass:[NSNumber class]] && n.doubleValue > 0) delay = n.doubleValue;
                 CFRelease(props);
             }
@@ -85,8 +86,8 @@ static UIImage *GFAnimatedImage(CGImageSourceRef source, size_t count, NSUIntege
         // UIImage shows every entry for the same time: a frame that stays longer is entered several times
         NSMutableArray *spread = [NSMutableArray arrayWithCapacity:(NSUInteger)(total / gcd)];
         for (NSUInteger i = 0; i < frames.count; i++) {
-            NSInteger repeat = [delays[i] integerValue] / gcd;
-            for (NSInteger k = 0; k < repeat; k++) [spread addObject:frames[i]];
+            NSInteger repeat = [[delays objectAtIndex:i] integerValue] / gcd;
+            for (NSInteger k = 0; k < repeat; k++) [spread addObject:[frames objectAtIndex:i]];
         }
         if (spread.count) sequence = spread;
     }
@@ -207,7 +208,7 @@ static UIImage *GFDecodeImage(NSData *data, CGFloat maxPixels, BOOL animate, NSU
 
 - (BOOL)hasFailed:(NSString *)url
 {
-    NSDate *when = url.length ? self.failed[url] : nil;
+    NSDate *when = url.length ? [self.failed objectForKey:url] : nil;
     if (!when) return NO;
     if (-[when timeIntervalSinceNow] > GFFailureRetryInterval) {
         [self.failed removeObjectForKey:url];
@@ -218,13 +219,13 @@ static UIImage *GFDecodeImage(NSData *data, CGFloat maxPixels, BOOL animate, NSU
 
 - (GFImageJob *)jobForURL:(NSString *)url maxPixels:(CGFloat)maxPixels
 {
-    GFImageJob *job = self.jobs[url];
+    GFImageJob *job = [self.jobs objectForKey:url];
     if (!job) {
         job = [[GFImageJob alloc] init];
         job.url = url;
         job.maxPixels = maxPixels;
         job.tokens = [NSMutableArray array];
-        self.jobs[url] = job;
+        GFLegacyDictionarySet(self.jobs, url, job);
         [self.queue addObject:job];
     } else if (!job.started) {
         // asked for again: to the front of the line
@@ -271,7 +272,7 @@ static UIImage *GFDecodeImage(NSData *data, CGFloat maxPixels, BOOL animate, NSU
     if (![token isKindOfClass:[GFImageToken class]]) return;
     GFImageToken *t = token;
     t.completion = nil;
-    GFImageJob *job = t.url ? self.jobs[t.url] : nil;
+    GFImageJob *job = t.url ? [self.jobs objectForKey:t.url] : nil;
     if (!job) return;
     [job.tokens removeObjectIdenticalTo:t];
     if (!job.started && !job.notify && job.tokens.count == 0) {
@@ -340,12 +341,12 @@ static UIImage *GFDecodeImage(NSData *data, CGFloat maxPixels, BOOL animate, NSU
 - (void)finishJob:(GFImageJob *)job image:(UIImage *)image cost:(NSUInteger)cost
 {
     self.running--;
-    if (self.jobs[job.url] == job) [self.jobs removeObjectForKey:job.url];
+    if ([self.jobs objectForKey:job.url] == job) [self.jobs removeObjectForKey:job.url];
     if (image) {
         [self.memory setObject:image forKey:job.url cost:MAX(cost, (NSUInteger)1024)];
         [self.failed removeObjectForKey:job.url];
     } else {
-        self.failed[job.url] = [NSDate date];
+        GFLegacyDictionarySet(self.failed, job.url, [NSDate date]);
     }
     for (GFImageToken *token in [job.tokens copy]) {
         void (^completion)(UIImage *) = token.completion;
@@ -414,11 +415,11 @@ static UIImage *GFDecodeImage(NSData *data, CGFloat maxPixels, BOOL animate, NSU
                 [files addObject:@[modified, @([attributes fileSize]), path]];
             }
             if (total > GFDiskMaxBytes) {
-                [files sortUsingComparator:^NSComparisonResult(NSArray *a, NSArray *b) { return [a[0] compare:b[0]]; }];
+                [files sortUsingComparator:^NSComparisonResult(NSArray *a, NSArray *b) { return [[a objectAtIndex:0] compare:[b objectAtIndex:0]]; }];
                 for (NSArray *f in files) {
                     if (total <= GFDiskMaxBytes * 3 / 4) break;
-                    [fm removeItemAtPath:f[2] error:NULL];
-                    total -= MIN(total, [f[1] unsignedLongLongValue]);
+                    [fm removeItemAtPath:[f objectAtIndex:2] error:NULL];
+                    total -= MIN(total, [[f objectAtIndex:1] unsignedLongLongValue]);
                     removed++;
                 }
             }

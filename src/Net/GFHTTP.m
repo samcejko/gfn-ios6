@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFHTTP.h"
 #import "GFHTTPRequest.h"
 #import "GFSettings.h"
@@ -43,7 +44,7 @@ static const NSInteger GFMaxRedirects = 5;
         NSInteger status = request.statusCode;
         NSDictionary *responseHeaders = request.responseHeaders;
         if (!error && status >= 300 && status < 400 && status != 304 && hops < GFMaxRedirects) {
-            NSString *location = responseHeaders[@"location"];
+            NSString *location = [responseHeaders objectForKey:@"location"];
             NSURL *next = location.length ? [[NSURL URLWithString:location relativeToURL:url] absoluteURL] : nil;
             if (next.host.length) {
                 BOOL safe = [method isEqualToString:@"GET"] || [method isEqualToString:@"HEAD"];
@@ -55,7 +56,7 @@ static const NSInteger GFMaxRedirects = 5;
                     for (NSString *key in headers) {
                         NSString *lower = [key lowercaseString];
                         if ([lower isEqualToString:@"authorization"] || [lower isEqualToString:@"client-id"]) continue;
-                        trimmed[key] = headers[key];
+                        GFLegacyDictionarySet(trimmed, key, [headers objectForKey:key]);
                     }
                     nextHeaders = trimmed;
                 }
@@ -109,12 +110,12 @@ static const NSInteger GFMaxRedirects = 5;
     NSDictionary *d = GFDict(json);
     if (!d) {
         NSDictionary *first = GFDict([GFArr(json) firstObject]);
-        return GFStr(first[@"error"]) ?: GFStr(first[@"message"]);
+        return GFStr([first objectForKey:@"error"]) ?: GFStr([first objectForKey:@"message"]);
     }
-    NSString *message = GFStr(d[@"message"]);
-    if (!message.length) message = GFStr(d[@"error_description"]);
-    if (!message.length) message = GFStr(GFDict([GFArr(d[@"errors"]) firstObject])[@"message"]);
-    if (!message.length && [d[@"error"] isKindOfClass:[NSString class]]) message = d[@"error"];
+    NSString *message = GFStr([d objectForKey:@"message"]);
+    if (!message.length) message = GFStr([d objectForKey:@"error_description"]);
+    if (!message.length) message = GFStr([GFDict([GFArr([d objectForKey:@"errors"]) firstObject]) objectForKey:@"message"]);
+    if (!message.length && [[d objectForKey:@"error"] isKindOfClass:[NSString class]]) message = [d objectForKey:@"error"];
     return message.length ? message : nil;
 }
 
@@ -140,7 +141,7 @@ static const NSInteger GFMaxRedirects = 5;
 + (GFHTTPTask *)getJSON:(NSString *)url headers:(NSDictionary *)headers completion:(GFJSONCompletion)completion
 {
     NSMutableDictionary *h = [NSMutableDictionary dictionaryWithDictionary:headers ?: @{}];
-    if (!h[@"Accept"]) h[@"Accept"] = @"application/json";
+    if (![h objectForKey:@"Accept"]) GFLegacyDictionarySet(h, @"Accept", @"application/json");
     return [self request:@"GET" url:url headers:h body:nil retries:1 completion:[self jsonHandler:completion]];
 }
 
@@ -148,8 +149,8 @@ static const NSInteger GFMaxRedirects = 5;
               completion:(GFJSONCompletion)completion
 {
     NSMutableDictionary *h = [NSMutableDictionary dictionaryWithDictionary:headers ?: @{}];
-    if (!h[@"Accept"]) h[@"Accept"] = @"application/json";
-    if (!h[@"Content-Type"]) h[@"Content-Type"] = @"application/json";
+    if (![h objectForKey:@"Accept"]) GFLegacyDictionarySet(h, @"Accept", @"application/json");
+    if (![h objectForKey:@"Content-Type"]) GFLegacyDictionarySet(h, @"Content-Type", @"application/json");
     NSData *body = [GFUtils JSONDataFromObject:object] ?: [NSData data];
     return [self request:@"POST" url:url headers:h body:body retries:retries completion:[self jsonHandler:completion]];
 }
@@ -158,12 +159,12 @@ static const NSInteger GFMaxRedirects = 5;
 {
     NSMutableArray *pairs = [NSMutableArray array];
     for (NSString *key in fields) {
-        [pairs addObject:[NSString stringWithFormat:@"%@=%@", [GFUtils urlEncode:key], [GFUtils urlEncode:[fields[key] description]]]];
+        [pairs addObject:[NSString stringWithFormat:@"%@=%@", [GFUtils urlEncode:key], [GFUtils urlEncode:[[fields objectForKey:key] description]]]];
     }
     NSData *body = [[pairs componentsJoinedByString:@"&"] dataUsingEncoding:NSUTF8StringEncoding];
     NSMutableDictionary *h = [NSMutableDictionary dictionaryWithDictionary:headers ?: @{}];
-    if (!h[@"Content-Type"]) h[@"Content-Type"] = @"application/x-www-form-urlencoded";
-    if (!h[@"Accept"]) h[@"Accept"] = @"application/json";
+    if (![h objectForKey:@"Content-Type"]) GFLegacyDictionarySet(h, @"Content-Type", @"application/x-www-form-urlencoded");
+    if (![h objectForKey:@"Accept"]) GFLegacyDictionarySet(h, @"Accept", @"application/json");
     return [self request:@"POST" url:url headers:h body:body retries:0 completion:[self jsonHandler:completion]];
 }
 

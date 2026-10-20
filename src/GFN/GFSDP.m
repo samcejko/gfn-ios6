@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFSDP.h"
 #import "GFCommon.h"
 #import <Security/Security.h>
@@ -29,12 +30,12 @@
         if ([line hasPrefix:@"m="]) {
             NSArray *parts = [[line substringFromIndex:2] componentsSeparatedByString:@" "];
             current = [NSMutableDictionary dictionary];
-            current[@"type"] = parts.count ? parts[0] : @"other";
-            current[@"proto"] = parts.count > 2 ? parts[2] : @"";
-            current[@"ptypes"] = parts.count > 3 ? [parts subarrayWithRange:NSMakeRange(3, parts.count - 3)] : @[];
-            current[@"rtpmap"] = [NSMutableDictionary dictionary];
-            current[@"fmtp"] = [NSMutableDictionary dictionary];
-            current[@"mid"] = [NSString stringWithFormat:@"%lu", (unsigned long)sections.count];
+            GFLegacyDictionarySet(current, @"type", parts.count ? [parts objectAtIndex:0] : @"other");
+            GFLegacyDictionarySet(current, @"proto", parts.count > 2 ? [parts objectAtIndex:2] : @"");
+            GFLegacyDictionarySet(current, @"ptypes", parts.count > 3 ? [parts subarrayWithRange:NSMakeRange(3, parts.count - 3)] : @[]);
+            GFLegacyDictionarySet(current, @"rtpmap", [NSMutableDictionary dictionary]);
+            GFLegacyDictionarySet(current, @"fmtp", [NSMutableDictionary dictionary]);
+            GFLegacyDictionarySet(current, @"mid", [NSString stringWithFormat:@"%lu", (unsigned long)sections.count]);
             [sections addObject:current];
             continue;
         }
@@ -48,8 +49,8 @@
         else if ([name isEqualToString:@"fingerprint"] && !o.fingerprint.length) o.fingerprint = value;
         else if ([name isEqualToString:@"candidate"]) {
             NSMutableArray *parts = [[value componentsSeparatedByString:@" "] mutableCopy];
-            if (parts.count >= 8 && ip.length && ([parts[4] isEqualToString:@"0.0.0.0"] || [parts[4] isEqualToString:@"127.0.0.1"])) parts[4] = ip;
-            if (parts.count >= 3 && [[parts[2] lowercaseString] isEqualToString:@"tcp"]) continue;
+            if (parts.count >= 8 && ip.length && ([[parts objectAtIndex:4] isEqualToString:@"0.0.0.0"] || [[parts objectAtIndex:4] isEqualToString:@"127.0.0.1"])) parts[4] = ip;
+            if (parts.count >= 3 && [[[parts objectAtIndex:2] lowercaseString] isEqualToString:@"tcp"]) continue;
             [candidates addObject:[@"candidate:" stringByAppendingString:[parts componentsJoinedByString:@" "]]];
         }
         else if ([name hasPrefix:@"ri."]) {
@@ -63,22 +64,22 @@
             else if ([name isEqualToString:@"ri.enablePartiallyReliableTransferHid"]) o.riPartialReliableHidMask = (uint32_t)n;
         }
         if (!current) continue;
-        if ([name isEqualToString:@"mid"]) current[@"mid"] = value;
+        if ([name isEqualToString:@"mid"]) GFLegacyDictionarySet(current, @"mid", value);
         else if ([name isEqualToString:@"rtpmap"]) {
             NSRange sp = [value rangeOfString:@" "];
-            if (sp.location != NSNotFound) current[@"rtpmap"][[value substringToIndex:sp.location]] = [value substringFromIndex:sp.location + 1];
+            if (sp.location != NSNotFound) GFLegacyDictionarySet([current objectForKey:@"rtpmap"], [value substringToIndex:sp.location], [value substringFromIndex:sp.location + 1]);
         } else if ([name isEqualToString:@"fmtp"]) {
             NSRange sp = [value rangeOfString:@" "];
-            if (sp.location != NSNotFound) current[@"fmtp"][[value substringToIndex:sp.location]] = [value substringFromIndex:sp.location + 1];
+            if (sp.location != NSNotFound) GFLegacyDictionarySet([current objectForKey:@"fmtp"], [value substringToIndex:sp.location], [value substringFromIndex:sp.location + 1]);
         } else if ([name isEqualToString:@"sctp-port"]) {
-            current[@"sctpPort"] = @([value integerValue]);
+            GFLegacyDictionarySet(current, @"sctpPort", @([value integerValue]));
         } else if ([name isEqualToString:@"sctpmap"]) {
-            current[@"sctpPort"] = @([[value componentsSeparatedByString:@" "].firstObject integerValue]);
+            GFLegacyDictionarySet(current, @"sctpPort", @([[value componentsSeparatedByString:@" "].firstObject integerValue]));
         } else if ([name isEqualToString:@"ssrc"]) {
             NSString *first = [value componentsSeparatedByString:@" "].firstObject;
-            if (!current[@"ssrc"]) current[@"ssrc"] = @([first longLongValue]);
+            if (![current objectForKey:@"ssrc"]) GFLegacyDictionarySet(current, @"ssrc", @([first longLongValue]));
         } else if ([name isEqualToString:@"sendonly"] || [name isEqualToString:@"recvonly"] || [name isEqualToString:@"sendrecv"] || [name isEqualToString:@"inactive"]) {
-            current[@"direction"] = name;
+            GFLegacyDictionarySet(current, @"direction", name);
         }
     }
     o.sections = sections;
@@ -87,30 +88,30 @@
     // codecs: the first H.264 payload type with packetization-mode=1 (else the first H.264 at all), opus and its RED
     BOOL videoSeen = NO, audioSeen = NO;
     for (NSDictionary *s in sections) {
-        NSString *type = s[@"type"];
-        NSDictionary *rtpmap = s[@"rtpmap"], *fmtp = s[@"fmtp"];
+        NSString *type = [s objectForKey:@"type"];
+        NSDictionary *rtpmap = [s objectForKey:@"rtpmap"], *fmtp = [s objectForKey:@"fmtp"];
         if ([type isEqualToString:@"video"] && !videoSeen) {
             videoSeen = YES;
             NSInteger fallback = -1;
-            for (NSString *pt in s[@"ptypes"]) {
-                NSString *codec = [[rtpmap[pt] componentsSeparatedByString:@"/"].firstObject uppercaseString];
+            for (NSString *pt in [s objectForKey:@"ptypes"]) {
+                NSString *codec = [[[rtpmap objectForKey:pt] componentsSeparatedByString:@"/"].firstObject uppercaseString];
                 if (![codec isEqualToString:@"H264"]) continue;
-                NSString *params = fmtp[pt] ?: @"";
+                NSString *params = [fmtp objectForKey:pt] ?: @"";
                 if (fallback < 0) fallback = [pt integerValue];
                 if ([params rangeOfString:@"packetization-mode=1"].location != NSNotFound) { o.h264PayloadType = [pt integerValue]; o.h264Fmtp = params; break; }
             }
-            if (o.h264PayloadType < 0 && fallback >= 0) { o.h264PayloadType = fallback; o.h264Fmtp = fmtp[[NSString stringWithFormat:@"%ld", (long)fallback]]; }
-            if (s[@"ssrc"]) o.videoSSRC = (uint32_t)[s[@"ssrc"] longLongValue];
+            if (o.h264PayloadType < 0 && fallback >= 0) { o.h264PayloadType = fallback; o.h264Fmtp = [fmtp objectForKey:[NSString stringWithFormat:@"%ld", (long)fallback]]; }
+            if ([s objectForKey:@"ssrc"]) o.videoSSRC = (uint32_t)[[s objectForKey:@"ssrc"] longLongValue];
         } else if ([type isEqualToString:@"audio"] && !audioSeen) {
             audioSeen = YES;
-            for (NSString *pt in s[@"ptypes"]) {
-                NSString *codec = [[rtpmap[pt] componentsSeparatedByString:@"/"].firstObject uppercaseString];
-                if ([codec isEqualToString:@"OPUS"] && o.opusPayloadType < 0) { o.opusPayloadType = [pt integerValue]; o.opusFmtp = fmtp[pt]; }
+            for (NSString *pt in [s objectForKey:@"ptypes"]) {
+                NSString *codec = [[[rtpmap objectForKey:pt] componentsSeparatedByString:@"/"].firstObject uppercaseString];
+                if ([codec isEqualToString:@"OPUS"] && o.opusPayloadType < 0) { o.opusPayloadType = [pt integerValue]; o.opusFmtp = [fmtp objectForKey:pt]; }
                 else if ([codec isEqualToString:@"RED"] && o.redPayloadType < 0) o.redPayloadType = [pt integerValue];
             }
-            if (s[@"ssrc"]) o.audioSSRC = (uint32_t)[s[@"ssrc"] longLongValue];
+            if ([s objectForKey:@"ssrc"]) o.audioSSRC = (uint32_t)[[s objectForKey:@"ssrc"] longLongValue];
         } else if ([type isEqualToString:@"application"]) {
-            if (s[@"sctpPort"]) o.sctpPort = [s[@"sctpPort"] integerValue];
+            if ([s objectForKey:@"sctpPort"]) o.sctpPort = [[s objectForKey:@"sctpPort"] integerValue];
         }
     }
     return o;
@@ -155,7 +156,7 @@
     NSArray *transport = @[ [@"a=ice-ufrag:" stringByAppendingString:ufrag], [@"a=ice-pwd:" stringByAppendingString:pwd],
                             @"a=ice-options:trickle", [@"a=fingerprint:sha-256 " stringByAppendingString:fingerprint], @"a=setup:active" ];
     for (NSDictionary *s in offer.sections) {
-        NSString *type = s[@"type"], *mid = s[@"mid"], *proto = s[@"proto"];
+        NSString *type = [s objectForKey:@"type"], *mid = [s objectForKey:@"mid"], *proto = [s objectForKey:@"proto"];
         NSMutableArray *m = [NSMutableArray array];
         if ([type isEqualToString:@"audio"] && !audioDone && offer.opusPayloadType >= 0) {
             audioDone = YES;
@@ -196,7 +197,7 @@
             [bundle addObject:mid];
         } else if ([type isEqualToString:@"application"] && !appDone) {
             appDone = YES;
-            BOOL oldStyle = [proto rangeOfString:@"webrtc-datachannel"].location == NSNotFound && ![s[@"ptypes"] containsObject:@"webrtc-datachannel"];
+            BOOL oldStyle = [proto rangeOfString:@"webrtc-datachannel"].location == NSNotFound && ![[s objectForKey:@"ptypes"] containsObject:@"webrtc-datachannel"];
             if (oldStyle) {
                 [m addObject:[NSString stringWithFormat:@"m=application 9 %@ %ld", proto.length ? proto : @"DTLS/SCTP", (long)offer.sctpPort]];
             } else {
@@ -211,14 +212,14 @@
             [bundle addObject:mid];
         } else {
             // the microphone and anything else: rejected
-            NSString *pts = [s[@"ptypes"] componentsJoinedByString:@" "];
+            NSString *pts = [[s objectForKey:@"ptypes"] componentsJoinedByString:@" "];
             [m addObject:[NSString stringWithFormat:@"m=%@ 0 %@%@%@", type, proto.length ? proto : @"UDP/TLS/RTP/SAVPF", pts.length ? @" " : @"", pts]];
             [m addObject:@"c=IN IP4 0.0.0.0"];
             [m addObjectsFromArray:transport];
             [m addObject:[@"a=mid:" stringByAppendingString:mid]];
             [m addObject:@"a=inactive"];
-            NSDictionary *rtpmap = s[@"rtpmap"];
-            for (NSString *pt in s[@"ptypes"]) if (rtpmap[pt]) [m addObject:[NSString stringWithFormat:@"a=rtpmap:%@ %@", pt, rtpmap[pt]]];
+            NSDictionary *rtpmap = [s objectForKey:@"rtpmap"];
+            for (NSString *pt in [s objectForKey:@"ptypes"]) if ([rtpmap objectForKey:pt]) [m addObject:[NSString stringWithFormat:@"a=rtpmap:%@ %@", pt, [rtpmap objectForKey:pt]]];
         }
         [media addObjectsFromArray:m];
     }

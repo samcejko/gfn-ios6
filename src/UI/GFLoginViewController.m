@@ -57,15 +57,15 @@ static UIImage *GFQRImage(NSString *text, CGFloat pixelsPerModule)
     self.instructionLabel = [self label:[theme bodyFont] color:[theme primaryTextColor]];
     self.instructionLabel.text = L(@"On your phone or computer open the link below (or scan the code) and enter this code with your NVIDIA account:");
     self.codeLabel = [self label:[UIFont fontWithName:@"Courier-Bold" size:GFIsPad() ? 44 : 34] color:[theme accentColor]];
-    self.codeLabel.textAlignment = NSTextAlignmentCenter;
+    self.codeLabel.textAlignment = UITextAlignmentCenter;
     self.urlLabel = [self label:[theme smallFont] color:[theme linkColor]];
-    self.urlLabel.textAlignment = NSTextAlignmentCenter;
-    self.urlLabel.lineBreakMode = NSLineBreakByCharWrapping;
+    self.urlLabel.textAlignment = UITextAlignmentCenter;
+    self.urlLabel.lineBreakMode = UILineBreakModeCharacterWrap;
     self.qrView = [[UIImageView alloc] initWithFrame:CGRectZero];
     self.qrView.contentMode = UIViewContentModeScaleAspectFit;
     [self.view addSubview:self.qrView];
     self.statusLabel = [self label:[theme smallFont] color:[theme secondaryTextColor]];
-    self.statusLabel.textAlignment = NSTextAlignmentCenter;
+    self.statusLabel.textAlignment = UITextAlignmentCenter;
 
     self.openButton = [self button:L(@"Open link here")];
     [self.openButton addTarget:self action:@selector(openLink:) forControlEvents:UIControlEventTouchUpInside];

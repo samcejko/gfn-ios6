@@ -181,8 +181,8 @@ static UIViewController *GFTopController(UIViewController *root)
         [self.rootViewController openGameId:[target substringFromIndex:@"play/".length]];
         return YES;
     }
-    if ([target isEqualToString:@"search"] && [params[@"q"] length]) {
-        [self.rootViewController searchFor:params[@"q"]];
+    if ([target isEqualToString:@"search"] && [[params objectForKey:@"q"] length]) {
+        [self.rootViewController searchFor:[params objectForKey:@"q"]];
         return YES;
     }
     if ([target isEqualToString:@"signin"]) {
@@ -208,16 +208,16 @@ static UIViewController *GFTopController(UIViewController *root)
         return YES;
     }
     // link?url=<percent-encoded url>: what a tapped web link does (the browser chooser on iOS 6), for the tests
-    if ([target isEqualToString:@"link"] && [params[@"url"] length]) {
+    if ([target isEqualToString:@"link"] && [[params objectForKey:@"url"] length]) {
         // (a moment later: the URL arrives before the app is active again, and newer iOS ignore openURL: and sheets then)
-        NSString *link = params[@"url"];
+        NSString *link = [params objectForKey:@"url"];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             [GFExternalOpen presentOpenInForURL:[NSURL URLWithString:link] from:GFTopController(self.rootViewController) anchor:nil];
         });
         return YES;
     }
     if ([target isEqualToString:@"stream"]) {
-        if ([top isKindOfClass:[GFStreamViewController class]]) [(GFStreamViewController *)top debugCommand:params[@"cmd"] ?: @"" params:params];
+        if ([top isKindOfClass:[GFStreamViewController class]]) [(GFStreamViewController *)top debugCommand:[params objectForKey:@"cmd"] ?: @"" params:params];
         else GFLog(@"Stream command: no stream open");
         return YES;
     }
@@ -254,13 +254,13 @@ static UIViewController *GFTopController(UIViewController *root)
         return YES;
     }
     if ([target isEqualToString:@"press"]) {
-        NSString *byTitle = params[@"title"];
-        NSInteger n = [params[@"n"] integerValue];
+        NSString *byTitle = [params objectForKey:@"title"];
+        NSInteger n = [[params objectForKey:@"n"] integerValue];
         NSMutableArray *views = [NSMutableArray array];
         for (UIWindow *w in [UIApplication sharedApplication].windows) [views addObject:w];
         BOOL pressed = NO;
         for (NSUInteger i = 0; i < views.count && !pressed; i++) {
-            UIView *v = views[i];
+            UIView *v = [views objectAtIndex:i];
             if (!byTitle.length && [v isKindOfClass:[UIAlertView class]] && ((UIAlertView *)v).visible) {
                 UIAlertView *alert = (UIAlertView *)v;
                 if ([alert.delegate respondsToSelector:@selector(alertView:clickedButtonAtIndex:)]) [alert.delegate alertView:alert clickedButtonAtIndex:n];
@@ -281,7 +281,7 @@ static UIViewController *GFTopController(UIViewController *root)
         return YES;
     }
     if ([target isEqualToString:@"tab"]) {
-        [self.rootViewController selectTab:[params[@"n"] integerValue]];
+        [self.rootViewController selectTab:[[params objectForKey:@"n"] integerValue]];
         return YES;
     }
     if ([target isEqualToString:@"scroll"]) {
@@ -290,7 +290,7 @@ static UIViewController *GFTopController(UIViewController *root)
         NSMutableArray *views = [NSMutableArray array];
         for (UIWindow *w in [UIApplication sharedApplication].windows) if (!w.hidden) [views addObject:w];
         for (NSUInteger i = 0; i < views.count; i++) {
-            UIView *v = views[i];
+            UIView *v = [views objectAtIndex:i];
             if ([v isKindOfClass:[UIScrollView class]] && !v.hidden && v.window) {
                 CGFloat area = v.bounds.size.width * v.bounds.size.height;
                 if (!largest || area > largest.bounds.size.width * largest.bounds.size.height) largest = (UIScrollView *)v;
@@ -299,7 +299,7 @@ static UIViewController *GFTopController(UIViewController *root)
         }
         if (largest) {
             CGFloat maxY = MAX(0, largest.contentSize.height + largest.contentInset.bottom - largest.bounds.size.height);
-            CGFloat y = [params[@"y"] isEqualToString:@"end"] ? maxY : MIN(maxY, MAX(-largest.contentInset.top, [params[@"y"] doubleValue]));
+            CGFloat y = [[params objectForKey:@"y"] isEqualToString:@"end"] ? maxY : MIN(maxY, MAX(-largest.contentInset.top, [[params objectForKey:@"y"] doubleValue]));
             [largest setContentOffset:CGPointMake(largest.contentOffset.x, y) animated:NO];
         }
         GFLog(@"Scroll: %@", largest ? NSStringFromClass([largest class]) : @"no scroll view");

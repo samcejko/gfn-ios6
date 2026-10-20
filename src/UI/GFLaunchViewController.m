@@ -41,7 +41,7 @@
     self.titleLabel.font = [UIFont boldSystemFontOfSize:GFIsPad() ? 26 : 20];
     self.titleLabel.textColor = [UIColor whiteColor];
     self.titleLabel.backgroundColor = [UIColor clearColor];
-    self.titleLabel.textAlignment = NSTextAlignmentCenter;
+    self.titleLabel.textAlignment = UITextAlignmentCenter;
     self.titleLabel.numberOfLines = 2;
     self.titleLabel.text = [GFUtils displayText:self.gameTitle];
     [self.view addSubview:self.titleLabel];
@@ -54,7 +54,7 @@
     self.statusLabel.font = [UIFont systemFontOfSize:GFIsPad() ? 18 : 15];
     self.statusLabel.textColor = [UIColor colorWithWhite:0.85 alpha:1];
     self.statusLabel.backgroundColor = [UIColor clearColor];
-    self.statusLabel.textAlignment = NSTextAlignmentCenter;
+    self.statusLabel.textAlignment = UITextAlignmentCenter;
     self.statusLabel.numberOfLines = 0;
     self.statusLabel.text = L(@"Starting…");
     [self.view addSubview:self.statusLabel];
@@ -63,7 +63,7 @@
     self.queueLabel.font = [UIFont systemFontOfSize:GFIsPad() ? 15 : 13];
     self.queueLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1];
     self.queueLabel.backgroundColor = [UIColor clearColor];
-    self.queueLabel.textAlignment = NSTextAlignmentCenter;
+    self.queueLabel.textAlignment = UITextAlignmentCenter;
     self.queueLabel.numberOfLines = 0;
     [self.view addSubview:self.queueLabel];
 

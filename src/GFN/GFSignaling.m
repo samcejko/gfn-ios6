@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFSignaling.h"
 #import "GFWebSocket.h"
 #import "GFUtils.h"
@@ -77,8 +78,8 @@ static NSString * const GFSignalingUserAgent = @"Mozilla/5.0 (Windows NT 10.0; W
 
 - (void)sendCandidate:(NSDictionary *)candidate
 {
-    NSArray *parts = [candidate[@"candidate"] componentsSeparatedByString:@" "];
-    if (parts.count > 2 && [[parts[2] lowercaseString] isEqualToString:@"tcp"]) return;
+    NSArray *parts = [[candidate objectForKey:@"candidate"] componentsSeparatedByString:@" "];
+    if (parts.count > 2 && [[[parts objectAtIndex:2] lowercaseString] isEqualToString:@"tcp"]) return;
     NSData *payload = [GFUtils JSONDataFromObject:candidate];
     [self sendPeerMessage:[[NSString alloc] initWithData:payload encoding:NSUTF8StringEncoding]];
 }
@@ -117,21 +118,21 @@ static NSString * const GFSignalingUserAgent = @"Mozilla/5.0 (Windows NT 10.0; W
 {
     NSDictionary *parsed = GFDict([GFUtils JSONObjectFromData:[text dataUsingEncoding:NSUTF8StringEncoding]]);
     if (!parsed) return;
-    NSDictionary *peerInfo = GFDict(parsed[@"peer_info"]);
-    if (peerInfo && [GFStr(peerInfo[@"name"]) isEqualToString:self.peerName] && peerInfo[@"id"]) self.localPeerId = (uint32_t)GFInt(peerInfo[@"id"]);
-    if (parsed[@"ackid"]) {
-        BOOL ownEcho = peerInfo && GFInt(peerInfo[@"id"]) == (NSInteger)self.localPeerId;
-        if (!ownEcho) [self sendJSON:@{ @"ack": parsed[@"ackid"] }];
+    NSDictionary *peerInfo = GFDict([parsed objectForKey:@"peer_info"]);
+    if (peerInfo && [GFStr([peerInfo objectForKey:@"name"]) isEqualToString:self.peerName] && [peerInfo objectForKey:@"id"]) self.localPeerId = (uint32_t)GFInt([peerInfo objectForKey:@"id"]);
+    if ([parsed objectForKey:@"ackid"]) {
+        BOOL ownEcho = peerInfo && GFInt([peerInfo objectForKey:@"id"]) == (NSInteger)self.localPeerId;
+        if (!ownEcho) [self sendJSON:@{ @"ack": [parsed objectForKey:@"ackid"] }];
     }
-    if (parsed[@"hb"]) { [self sendJSON:@{ @"hb": @1 }]; return; }
-    if ([GFStr(parsed[@"error"]) isEqualToString:@"peerRemoved"]) {
+    if ([parsed objectForKey:@"hb"]) { [self sendJSON:@{ @"hb": @1 }]; return; }
+    if ([GFStr([parsed objectForKey:@"error"]) isEqualToString:@"peerRemoved"]) {
         dispatch_async(dispatch_get_main_queue(), ^{ [self.delegate signaling:self didClose:@"peerRemoved"]; });
         return;
     }
-    NSDictionary *peerMsg = GFDict(parsed[@"peer_msg"]);
+    NSDictionary *peerMsg = GFDict([parsed objectForKey:@"peer_msg"]);
     if (!peerMsg) return;
-    if (peerMsg[@"from"]) self.remotePeerId = (uint32_t)GFInt(peerMsg[@"from"]);
-    NSString *msg = [GFStr(peerMsg[@"msg"]) stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if ([peerMsg objectForKey:@"from"]) self.remotePeerId = (uint32_t)GFInt([peerMsg objectForKey:@"from"]);
+    NSString *msg = [GFStr([peerMsg objectForKey:@"msg"]) stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (!msg.length) return;
     if ([msg isEqualToString:@"BYE"]) {
         dispatch_async(dispatch_get_main_queue(), ^{ [self.delegate signaling:self didClose:@"BYE"]; });
@@ -139,20 +140,20 @@ static NSString * const GFSignalingUserAgent = @"Mozilla/5.0 (Windows NT 10.0; W
     }
     NSDictionary *payload = GFDict([GFUtils JSONObjectFromData:[msg dataUsingEncoding:NSUTF8StringEncoding]]);
     if (!payload) { GFLog(@"Signaling: non-JSON peer message: %@", [GFUtils truncate:msg to:120]); return; }
-    if ([GFStr(payload[@"type"]) isEqualToString:@"offer"] && GFStr(payload[@"sdp"]).length) {
-        NSString *sdp = GFStr(payload[@"sdp"]);
+    if ([GFStr([payload objectForKey:@"type"]) isEqualToString:@"offer"] && GFStr([payload objectForKey:@"sdp"]).length) {
+        NSString *sdp = GFStr([payload objectForKey:@"sdp"]);
         GFLog(@"Signaling: offer received (%lu bytes)", (unsigned long)sdp.length);
         dispatch_async(dispatch_get_main_queue(), ^{ [self.delegate signaling:self didReceiveOffer:sdp]; });
         return;
     }
-    NSString *candidate = GFStr(payload[@"candidate"]);
+    NSString *candidate = GFStr([payload objectForKey:@"candidate"]);
     if (candidate.length) {
         NSArray *parts = [candidate componentsSeparatedByString:@" "];
-        if (parts.count > 2 && [[parts[2] lowercaseString] isEqualToString:@"tcp"]) return;
+        if (parts.count > 2 && [[[parts objectAtIndex:2] lowercaseString] isEqualToString:@"tcp"]) return;
         NSMutableDictionary *c = [NSMutableDictionary dictionaryWithObject:candidate forKey:@"candidate"];
-        if (GFStr(payload[@"sdpMid"])) c[@"sdpMid"] = GFStr(payload[@"sdpMid"]);
-        if (payload[@"sdpMLineIndex"]) c[@"sdpMLineIndex"] = @(GFInt(payload[@"sdpMLineIndex"]));
-        if (GFStr(payload[@"usernameFragment"])) c[@"usernameFragment"] = GFStr(payload[@"usernameFragment"]);
+        if (GFStr([payload objectForKey:@"sdpMid"])) GFLegacyDictionarySet(c, @"sdpMid", GFStr([payload objectForKey:@"sdpMid"]));
+        if ([payload objectForKey:@"sdpMLineIndex"]) GFLegacyDictionarySet(c, @"sdpMLineIndex", @(GFInt([payload objectForKey:@"sdpMLineIndex"])));
+        if (GFStr([payload objectForKey:@"usernameFragment"])) GFLegacyDictionarySet(c, @"usernameFragment", GFStr([payload objectForKey:@"usernameFragment"]));
         dispatch_async(dispatch_get_main_queue(), ^{ [self.delegate signaling:self didReceiveCandidate:c]; });
     }
 }

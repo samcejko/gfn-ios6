@@ -152,7 +152,7 @@ static UIImage *AuditDirectionIcon(NSString *direction, UIColor *color)
     self.statusLabel.font = [UIFont systemFontOfSize:GFIsPad() ? 16 : 13];
     self.statusLabel.textColor = [UIColor whiteColor];
     self.statusLabel.backgroundColor = [UIColor colorWithWhite:0 alpha:0.5];
-    self.statusLabel.textAlignment = NSTextAlignmentCenter;
+    self.statusLabel.textAlignment = UITextAlignmentCenter;
     self.statusLabel.numberOfLines = 0;
     self.statusLabel.text = L(@"Connecting…");
     [self.view addSubview:self.statusLabel];
@@ -173,7 +173,7 @@ static UIImage *AuditDirectionIcon(NSString *direction, UIColor *color)
     self.toastLabel.font = [UIFont boldSystemFontOfSize:GFIsPad() ? 16 : 13];
     self.toastLabel.textColor = [UIColor whiteColor];
     self.toastLabel.backgroundColor = [UIColor colorWithRed:0.3 green:0.5 blue:0.05 alpha:0.85];
-    self.toastLabel.textAlignment = NSTextAlignmentCenter;
+    self.toastLabel.textAlignment = UITextAlignmentCenter;
     self.toastLabel.numberOfLines = 0;
     self.toastLabel.hidden = YES;
     [self.view addSubview:self.toastLabel];
@@ -205,9 +205,9 @@ static UIImage *AuditDirectionIcon(NSString *direction, UIColor *color)
     NSMutableArray *items = [NSMutableArray array];
     NSArray *keys = @[ @[ @"Esc", @"escape" ], @[ @"Tab", @"tab" ], @[ @"Enter", @"enter" ], @[ @"", @"up" ], @[ @"", @"down" ], @[ @"", @"left" ], @[ @"", @"right" ], @[ @"F1", @"f1" ], @[ @"F5", @"f5" ] ];
     for (NSArray *k in keys) {
-        UIImage *arrow = AuditDirectionIcon(k[1], [UIColor whiteColor]);
-        UIBarButtonItem *item = arrow ? [[UIBarButtonItem alloc] initWithImage:arrow style:UIBarButtonItemStyleBordered target:self action:@selector(accessoryKey:)] : [[UIBarButtonItem alloc] initWithTitle:k[0] style:UIBarButtonItemStyleBordered target:self action:@selector(accessoryKey:)];
-        item.accessibilityLabel = k[1];
+        UIImage *arrow = AuditDirectionIcon([k objectAtIndex:1], [UIColor whiteColor]);
+        UIBarButtonItem *item = arrow ? [[UIBarButtonItem alloc] initWithImage:arrow style:UIBarButtonItemStyleBordered target:self action:@selector(accessoryKey:)] : [[UIBarButtonItem alloc] initWithTitle:[k objectAtIndex:0] style:UIBarButtonItemStyleBordered target:self action:@selector(accessoryKey:)];
+        item.accessibilityLabel = [k objectAtIndex:1];
         [items addObject:item];
     }
     [items addObject:[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil]];
@@ -391,9 +391,9 @@ static UIImage *AuditDirectionIcon(NSString *direction, UIColor *color)
 
 - (void)peer:(GFPeer *)peer didReceiveControlMessage:(NSDictionary *)message
 {
-    NSString *type = GFStr(message[@"type"]);
+    NSString *type = GFStr([message objectForKey:@"type"]);
     if ([type isEqualToString:@"timerNotification"]) {
-        NSInteger seconds = GFInt(message[@"secondsLeft"]);
+        NSInteger seconds = GFInt([message objectForKey:@"secondsLeft"]);
         if (seconds > 0) [self showToast:[NSString stringWithFormat:L(@"Session time left: %@"), [GFUtils formatDuration:seconds]]];
     } else {
         GFLog(@"Control message: %@", message);
@@ -418,10 +418,10 @@ static UIImage *AuditDirectionIcon(NSString *direction, UIColor *color)
     }
     if (!self.statsLabel.hidden) {
         self.statsLabel.text = [NSString stringWithFormat:@"%.0f fps  %.0f kb/s  rtt %.0f ms\nlost %@  pli %@  nack %@\ndec %llu (%.1f ms) err %llu drop %llu\naudio %@ pk  buf %ld ms  conceal %llu",
-                                [stats[@"fps"] doubleValue], [stats[@"kbps"] doubleValue], [stats[@"rtt"] doubleValue],
-                                stats[@"lost"], stats[@"pli"], stats[@"nack"],
+                                [[stats objectForKey:@"fps"] doubleValue], [[stats objectForKey:@"kbps"] doubleValue], [[stats objectForKey:@"rtt"] doubleValue],
+                                [stats objectForKey:@"lost"], [stats objectForKey:@"pli"], [stats objectForKey:@"nack"],
                                 self.decoder.decodedFrames, self.decoder.averageDecodeMs, self.decoder.errors, self.decoder.droppedInputs,
-                                stats[@"audio"], (long)self.audio.bufferedMs, self.audio.concealed];
+                                [stats objectForKey:@"audio"], (long)self.audio.bufferedMs, self.audio.concealed];
         [self.view setNeedsLayout];
     }
 }
@@ -601,26 +601,26 @@ static UIImage *AuditDirectionIcon(NSString *direction, UIColor *color)
 - (void)debugCommand:(NSString *)command params:(NSDictionary *)params
 {
     if ([command isEqualToString:@"key"]) {
-        [self tapKey:[GFInputProtocol keyNamed:params[@"name"] ?: @"escape"]];
+        [self tapKey:[GFInputProtocol keyNamed:[params objectForKey:@"name"] ?: @"escape"]];
     } else if ([command isEqualToString:@"type"]) {
-        NSString *text = params[@"text"] ?: @"";
+        NSString *text = [params objectForKey:@"text"] ?: @"";
         for (NSUInteger i = 0; i < text.length; i++) [self typeCharacter:[text characterAtIndex:i]];
     } else if ([command isEqualToString:@"pad"]) {
         GFGamepadState s;
         memset(&s, 0, sizeof(s));
-        s.buttons = (uint16_t)strtoul([params[@"buttons"] ?: @"0" UTF8String], NULL, 0);
-        s.leftX = (int16_t)[params[@"lx"] intValue];
-        s.leftY = (int16_t)[params[@"ly"] intValue];
+        s.buttons = (uint16_t)strtoul([[params objectForKey:@"buttons"] ?: @"0" UTF8String], NULL, 0);
+        s.leftX = (int16_t)[[params objectForKey:@"lx"] intValue];
+        s.leftY = (int16_t)[[params objectForKey:@"ly"] intValue];
         [self.peer sendGamepad:s];
-        double hold = [params[@"hold"] doubleValue] ?: 0.2;
+        double hold = [[params objectForKey:@"hold"] doubleValue] ?: 0.2;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(hold * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             GFGamepadState zero;
             memset(&zero, 0, sizeof(zero));
             [self.peer sendGamepad:zero];
         });
     } else if ([command isEqualToString:@"mouse"]) {
-        [self.peer sendMouseMoveDX:[params[@"dx"] intValue] dy:[params[@"dy"] intValue]];
-        if ([params[@"click"] boolValue]) { [self.peer sendMouseButton:1 pressed:YES]; [self.peer sendMouseButton:1 pressed:NO]; }
+        [self.peer sendMouseMoveDX:[[params objectForKey:@"dx"] intValue] dy:[[params objectForKey:@"dy"] intValue]];
+        if ([[params objectForKey:@"click"] boolValue]) { [self.peer sendMouseButton:1 pressed:YES]; [self.peer sendMouseButton:1 pressed:NO]; }
     } else if ([command isEqualToString:@"keyframe"]) {
         [self.peer requestKeyframe];
     } else if ([command isEqualToString:@"quit"]) {

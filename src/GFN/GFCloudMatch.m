@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFCloudMatch.h"
 #import "GFAPI.h"
 #import "GFAuth.h"
@@ -159,9 +160,9 @@ static BOOL GFIsZoneHost(NSString *host)
             NSDictionary *json = GFDict([GFUtils JSONObjectFromData:body]);
             if (json) {
                 anyOk = YES;
-                for (NSDictionary *s in GFArr(json[@"sessions"])) {
-                    NSString *id = GFFlexString(GFDict(s)[@"sessionId"]);
-                    if (id.length && GFStatusCode(GFDict(s)[@"status"]) != 4 && ![all containsObject:id]) [all addObject:id];
+                for (NSDictionary *s in GFArr([json objectForKey:@"sessions"])) {
+                    NSString *id = GFFlexString([GFDict(s) objectForKey:@"sessionId"]);
+                    if (id.length && GFStatusCode([GFDict(s) objectForKey:@"status"]) != 4 && ![all containsObject:id]) [all addObject:id];
                 }
             } else if (error) {
                 GFLog(@"Could not list sessions on %@: %@", base, error.localizedDescription);
@@ -174,7 +175,7 @@ static BOOL GFIsZoneHost(NSString *host)
 - (void)stopSessionIds:(NSArray *)ids index:(NSUInteger)index stoppedAny:(BOOL)stoppedAny completion:(void (^)(BOOL stoppedAny))completion
 {
     if (index >= ids.count) { completion(stoppedAny); return; }
-    [GFCloudMatch deleteSession:ids[index] bases:[self cleanupBases] index:0 headers:[self headers] completion:^(NSInteger outcome) {
+    [GFCloudMatch deleteSession:[ids objectAtIndex:index] bases:[self cleanupBases] index:0 headers:[self headers] completion:^(NSInteger outcome) {
         [self stopSessionIds:ids index:index + 1 stoppedAny:stoppedAny || outcome == 1 completion:completion];
     }];
 }
@@ -183,7 +184,7 @@ static BOOL GFIsZoneHost(NSString *host)
 + (void)deleteSession:(NSString *)sessionId bases:(NSArray *)bases index:(NSUInteger)index headers:(NSDictionary *)headers completion:(void (^)(NSInteger outcome))completion
 {
     if (index >= bases.count) { completion(1); return; }   // not found anywhere = gone
-    NSString *url = [NSString stringWithFormat:@"%@/v2/session/%@", bases[index], sessionId];
+    NSString *url = [NSString stringWithFormat:@"%@/v2/session/%@", [bases objectAtIndex:index], sessionId];
     [GFHTTP request:@"DELETE" url:url headers:headers body:nil retries:0 completion:^(NSInteger status, NSData *body, NSDictionary *h, NSError *error) {
         if (status >= 200 && status < 300) { GFLog(@"Session %@ ended", sessionId); completion(1); return; }
         if (status == 404) { [self deleteSession:sessionId bases:bases index:index + 1 headers:headers completion:completion]; return; }
@@ -275,8 +276,8 @@ static BOOL GFIsZoneHost(NSString *host)
         if (self.cancelled) return;
         NSString *text = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] ?: @"" : @"";
         NSDictionary *json = GFDict([GFUtils JSONObjectFromData:data]);
-        NSDictionary *rs = GFDict(json[@"requestStatus"]);
-        NSInteger code = GFInt(rs[@"statusCode"]);
+        NSDictionary *rs = GFDict([json objectForKey:@"requestStatus"]);
+        NSInteger code = GFInt([rs objectForKey:@"statusCode"]);
         NSString *describe = [self describeStatus:rs];
         if (status >= 200 && status < 300 && json) {
             if (code == 1) { [self adoptPayload:json]; [self pollSession]; return; }
@@ -291,7 +292,7 @@ static BOOL GFIsZoneHost(NSString *host)
         if (status == 429 || status >= 500) {
             self.createThrottled++;
             if (self.createThrottled <= 6) {
-                NSInteger wait = MIN(30, MAX(1, [h[@"retry-after"] integerValue] ?: (2 << MIN(3, self.createThrottled))));
+                NSInteger wait = MIN(30, MAX(1, [[h objectForKey:@"retry-after"] integerValue] ?: (2 << MIN(3, self.createThrottled))));
                 GFLog(@"CloudMatch replied %ld, retrying in %ld s", (long)status, (long)wait);
                 [self progress:L(@"NVIDIA is busy, trying again…") queue:0 eta:0];
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(wait * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ if (!self.cancelled) [self createSession]; });
@@ -315,19 +316,19 @@ static BOOL GFIsZoneHost(NSString *host)
 
 - (NSString *)describeStatus:(NSDictionary *)rs
 {
-    NSString *text = GFStr(rs[@"statusDescription"]) ?: GFStr(rs[@"statusMessage"]);
-    id unified = rs[@"unifiedErrorCode"];
+    NSString *text = GFStr([rs objectForKey:@"statusDescription"]) ?: GFStr([rs objectForKey:@"statusMessage"]);
+    id unified = [rs objectForKey:@"unifiedErrorCode"];
     if (text.length && unified) return [NSString stringWithFormat:@"%@ (#%@)", text, unified];
     if (text.length) return text;
     if (unified) return [NSString stringWithFormat:@"#%@", unified];
-    return rs ? [NSString stringWithFormat:@"code %ld", (long)GFInt(rs[@"statusCode"])] : @"unknown";
+    return rs ? [NSString stringWithFormat:@"code %ld", (long)GFInt([rs objectForKey:@"statusCode"])] : @"unknown";
 }
 
 - (BOOL)isSessionLimit:(NSDictionary *)rs text:(NSString *)text
 {
-    NSInteger code = GFInt(rs[@"statusCode"]);
+    NSInteger code = GFInt([rs objectForKey:@"statusCode"]);
     if (code == 11 || code == 50 || code == 83) return YES;
-    NSString *d = [GFStr(rs[@"statusDescription"]) uppercaseString] ?: @"";
+    NSString *d = [GFStr([rs objectForKey:@"statusDescription"]) uppercaseString] ?: @"";
     return [d rangeOfString:@"SESSION_LIMIT"].location != NSNotFound || [d rangeOfString:@"SESSION_EXISTS"].location != NSNotFound;
 }
 
@@ -338,10 +339,10 @@ static BOOL GFIsZoneHost(NSString *host)
         return;
     }
     NSMutableArray *ids = [NSMutableArray array];
-    NSString *own = GFFlexString(GFDict(json[@"session"])[@"sessionId"]);
+    NSString *own = GFFlexString([GFDict([json objectForKey:@"session"]) objectForKey:@"sessionId"]);
     if (own.length) [ids addObject:own];
-    for (NSDictionary *s in GFArr(json[@"otherUserSessions"])) {
-        NSString *id = GFFlexString(GFDict(s)[@"sessionId"]);
+    for (NSDictionary *s in GFArr([json objectForKey:@"otherUserSessions"])) {
+        NSString *id = GFFlexString([GFDict(s) objectForKey:@"sessionId"]);
         if (id.length && ![ids containsObject:id]) [ids addObject:id];
     }
     [self progress:L(@"Ending the session already open…") queue:0 eta:0];
@@ -377,9 +378,9 @@ static BOOL GFIsZoneHost(NSString *host)
     self.task = [GFHTTP get:url headers:[self headers] completion:^(NSInteger status, NSData *data, NSDictionary *h, NSError *error) {
         if (self.cancelled) return;
         NSDictionary *json = GFDict([GFUtils JSONObjectFromData:data]);
-        NSDictionary *rs = GFDict(json[@"requestStatus"]);
+        NSDictionary *rs = GFDict([json objectForKey:@"requestStatus"]);
         if (status >= 500 || (status == 0 && error)) {
-            BOOL patching = GFInt(rs[@"statusCode"]) == 41 && [[GFStr(rs[@"statusDescription"]) uppercaseString] rangeOfString:@"APP_PATCHING"].location != NSNotFound;
+            BOOL patching = GFInt([rs objectForKey:@"statusCode"]) == 41 && [[GFStr([rs objectForKey:@"statusDescription"]) uppercaseString] rangeOfString:@"APP_PATCHING"].location != NSNotFound;
             if (patching) {
                 self.serverErrors = 0;
                 [self progress:L(@"The game is being updated on NVIDIA's side, please wait…") queue:0 eta:0];
@@ -402,17 +403,17 @@ static BOOL GFIsZoneHost(NSString *host)
             [self finishWithSession:nil error:GFMakeError(GFErrorAPI, [NSString stringWithFormat:@"HTTP %ld: %@", (long)status, [self describeStatus:rs]])];
             return;
         }
-        if (GFInt(rs[@"statusCode"]) != 1) {
+        if (GFInt([rs objectForKey:@"statusCode"]) != 1) {
             [self finishWithSession:nil error:GFMakeError(GFErrorAPI, [NSString stringWithFormat:L(@"NVIDIA ended the launch: %@"), [self describeStatus:rs]])];
             return;
         }
-        NSDictionary *s = GFDict(json[@"session"]);
+        NSDictionary *s = GFDict([json objectForKey:@"session"]);
         if (!s) { [self finishWithSession:nil error:GFMakeError(GFErrorBadResponse, L(@"Unexpected answer from NVIDIA."))]; return; }
         [self observeAds:s];
-        NSDictionary *seat = GFDict(s[@"seatSetupInfo"]);
-        NSInteger position = GFInt(seat[@"queuePosition"]);
-        NSInteger eta = GFInt(seat[@"seatSetupEta"]);
-        NSInteger st = GFStatusCode(s[@"status"]);
+        NSDictionary *seat = GFDict([s objectForKey:@"seatSetupInfo"]);
+        NSInteger position = GFInt([seat objectForKey:@"queuePosition"]);
+        NSInteger eta = GFInt([seat objectForKey:@"seatSetupEta"]);
+        NSInteger st = GFStatusCode([s objectForKey:@"status"]);
         if (position > 0) self.wasQueued = YES;
         NSString *message;
         if (position > 0) message = [NSString stringWithFormat:L(@"In the queue: position %ld"), (long)position];
@@ -445,7 +446,7 @@ static BOOL GFIsZoneHost(NSString *host)
 - (NSDictionary *)pendingAd
 {
     for (NSDictionary *ad in self.ads) {
-        if (![self.adStates[ad[@"adId"]] isEqual:@"done"]) return ad;
+        if (![[self.adStates objectForKey:[ad objectForKey:@"adId"]] isEqual:@"done"]) return ad;
     }
     return nil;
 }
@@ -454,13 +455,13 @@ static BOOL GFIsZoneHost(NSString *host)
 // There is no video player here: each one is reported after its length has passed.
 - (void)observeAds:(NSDictionary *)session
 {
-    NSArray *raw = GFArr(session[@"sessionAds"]) ?: GFArr(session[@"ads"]);
+    NSArray *raw = GFArr([session objectForKey:@"sessionAds"]) ?: GFArr([session objectForKey:@"ads"]);
     if (raw.count) {
         NSMutableArray *ads = [NSMutableArray array];
         for (NSDictionary *a in raw) {
-            NSString *id = GFFlexString(GFDict(a)[@"adId"]);
+            NSString *id = GFFlexString([GFDict(a) objectForKey:@"adId"]);
             if (!id.length) continue;
-            double lengthMs = a[@"durationMs"] ? GFDbl(a[@"durationMs"]) : GFDbl(a[@"adLengthInSeconds"]) * 1000;
+            double lengthMs = [a objectForKey:@"durationMs"] ? GFDbl([a objectForKey:@"durationMs"]) : GFDbl([a objectForKey:@"adLengthInSeconds"]) * 1000;
             [ads addObject:@{ @"adId": id, @"lengthMs": @(lengthMs > 0 ? lengthMs : 15000) }];
         }
         if (ads.count && ![ads isEqualToArray:self.ads]) GFLog(@"Queue ads: %lu", (unsigned long)ads.count);
@@ -468,16 +469,16 @@ static BOOL GFIsZoneHost(NSString *host)
     }
     NSDictionary *ad = [self pendingAd];
     if (!ad) return;
-    id state = self.adStates[ad[@"adId"]];
+    id state = [self.adStates objectForKey:[ad objectForKey:@"adId"]];
     if (!state) {
-        [self reportAd:ad[@"adId"] action:1 watchedMs:0 completion:^(BOOL ok) {
-            if (ok) self.adStates[ad[@"adId"]] = @([[NSDate date] timeIntervalSince1970]);
+        [self reportAd:[ad objectForKey:@"adId"] action:1 watchedMs:0 completion:^(BOOL ok) {
+            if (ok) GFLegacyDictionarySet(self.adStates, [ad objectForKey:@"adId"], @([[NSDate date] timeIntervalSince1970]));
         }];
     } else if ([state isKindOfClass:[NSNumber class]]) {
         double elapsedMs = ([[NSDate date] timeIntervalSince1970] - [state doubleValue]) * 1000;
-        if (elapsedMs >= [ad[@"lengthMs"] doubleValue]) {
-            [self reportAd:ad[@"adId"] action:4 watchedMs:(NSInteger)elapsedMs completion:^(BOOL ok) {
-                if (ok) self.adStates[ad[@"adId"]] = @"done";
+        if (elapsedMs >= [[ad objectForKey:@"lengthMs"] doubleValue]) {
+            [self reportAd:[ad objectForKey:@"adId"] action:4 watchedMs:(NSInteger)elapsedMs completion:^(BOOL ok) {
+                if (ok) GFLegacyDictionarySet(self.adStates, [ad objectForKey:@"adId"], @"done");
             }];
         }
     }
@@ -486,12 +487,12 @@ static BOOL GFIsZoneHost(NSString *host)
 - (void)reportAd:(NSString *)adId action:(NSInteger)action watchedMs:(NSInteger)watchedMs completion:(void (^)(BOOL ok))completion
 {
     NSMutableDictionary *update = [@{ @"adId": adId, @"adAction": @(action), @"clientTimestamp": @((long long)[[NSDate date] timeIntervalSince1970]) } mutableCopy];
-    if (action == 4) { update[@"watchedTimeInMs"] = @(watchedMs); update[@"pausedTimeInMs"] = @0; }
+    if (action == 4) { GFLegacyDictionarySet(update, @"watchedTimeInMs", @(watchedMs)); GFLegacyDictionarySet(update, @"pausedTimeInMs", @0); }
     NSDictionary *body = @{ @"action": @6, @"adUpdates": @[ update ] };
     NSString *url = [NSString stringWithFormat:@"%@/v2/session/%@", self.session.streamingBaseURL, self.session.sessionId];
     [GFHTTP request:@"PUT" url:url headers:[self headers] body:[GFUtils JSONDataFromObject:body] retries:0 completion:^(NSInteger status, NSData *data, NSDictionary *h, NSError *error) {
         NSDictionary *json = GFDict([GFUtils JSONObjectFromData:data]);
-        BOOL ok = status >= 200 && status < 300 && GFInt(GFDict(json[@"requestStatus"])[@"statusCode"]) == 1;
+        BOOL ok = status >= 200 && status < 300 && GFInt([GFDict([json objectForKey:@"requestStatus"]) objectForKey:@"statusCode"]) == 1;
         GFLog(@"Ad %@ action %ld: %@", adId, (long)action, ok ? @"accepted" : [NSString stringWithFormat:@"rejected (HTTP %ld)", (long)status]);
         completion(ok);
     }];
@@ -514,40 +515,40 @@ static BOOL GFIsZoneHost(NSString *host)
 
 - (BOOL)connection:(NSDictionary *)conn hasUsage:(NSInteger)usage
 {
-    id u = conn[@"usage"];
+    id u = [conn objectForKey:@"usage"];
     return GFInt(u) == usage && u != nil;
 }
 
 - (void)adoptPayload:(NSDictionary *)json
 {
-    NSDictionary *s = GFDict(json[@"session"]);
+    NSDictionary *s = GFDict([json objectForKey:@"session"]);
     GFSession *info = self.session ?: [[GFSession alloc] init];
-    info.sessionId = GFFlexString(s[@"sessionId"]) ?: info.sessionId;
-    info.appId = GFFlexString(GFDict(s[@"sessionRequestData"])[@"appId"]) ?: self.appId;
-    info.status = GFStatusCode(s[@"status"]);
+    info.sessionId = GFFlexString([s objectForKey:@"sessionId"]) ?: info.sessionId;
+    info.appId = GFFlexString([GFDict([s objectForKey:@"sessionRequestData"]) objectForKey:@"appId"]) ?: self.appId;
+    info.status = GFStatusCode([s objectForKey:@"status"]);
     info.streamingBaseURL = self.baseURL;
     info.clientId = self.clientId;
     info.deviceId = self.deviceId;
-    info.width = GFInt(s[@"width"]);
-    info.height = GFInt(s[@"height"]);
-    info.fps = GFInt(s[@"fps"]);
-    NSDictionary *seat = GFDict(s[@"seatSetupInfo"]);
-    info.queuePosition = GFInt(seat[@"queuePosition"]);
-    info.etaSeconds = GFInt(seat[@"seatSetupEta"]);
-    info.setupStep = GFInt(seat[@"seatSetupStep"]);
+    info.width = GFInt([s objectForKey:@"width"]);
+    info.height = GFInt([s objectForKey:@"height"]);
+    info.fps = GFInt([s objectForKey:@"fps"]);
+    NSDictionary *seat = GFDict([s objectForKey:@"seatSetupInfo"]);
+    info.queuePosition = GFInt([seat objectForKey:@"queuePosition"]);
+    info.etaSeconds = GFInt([seat objectForKey:@"seatSetupEta"]);
+    info.setupStep = GFInt([seat objectForKey:@"seatSetupStep"]);
 
-    NSArray *connections = GFArr(s[@"connectionInfo"]);
+    NSArray *connections = GFArr([s objectForKey:@"connectionInfo"]);
     NSDictionary *signaling = nil;
     for (NSDictionary *c in connections) if (GFDict(c) && [self connection:c hasUsage:14]) { signaling = c; break; }
     // the seat host: usage 14's ip, then the host inside its resourcePath, then sessionControlInfo.ip
-    NSString *serverIp = GFFlexString(signaling[@"ip"]);
-    if (!serverIp.length) serverIp = GFHostOf(GFStr(signaling[@"resourcePath"]));
-    if (!serverIp.length) serverIp = GFFlexString(GFDict(s[@"sessionControlInfo"])[@"ip"]);
+    NSString *serverIp = GFFlexString([signaling objectForKey:@"ip"]);
+    if (!serverIp.length) serverIp = GFHostOf(GFStr([signaling objectForKey:@"resourcePath"]));
+    if (!serverIp.length) serverIp = GFFlexString([GFDict([s objectForKey:@"sessionControlInfo"]) objectForKey:@"ip"]);
     info.serverIp = serverIp ?: @"";
-    if (!signaling || !GFFlexString(signaling[@"ip"]).length) {
-        for (NSDictionary *c in connections) if (GFDict(c) && GFFlexString(c[@"ip"]).length) { signaling = signaling ?: c; break; }
+    if (!signaling || !GFFlexString([signaling objectForKey:@"ip"]).length) {
+        for (NSDictionary *c in connections) if (GFDict(c) && GFFlexString([c objectForKey:@"ip"]).length) { signaling = signaling ?: c; break; }
     }
-    NSString *resource = GFStr(signaling[@"resourcePath"]) ?: @"/nvst/";
+    NSString *resource = GFStr([signaling objectForKey:@"resourcePath"]) ?: @"/nvst/";
     info.signalingURL = [self signalingURLFromResource:resource serverIp:info.serverIp];
 
     info.mediaIp = nil;
@@ -555,8 +556,8 @@ static BOOL GFIsZoneHost(NSString *host)
     for (NSNumber *usage in @[ @2, @17 ]) {
         for (NSDictionary *c in connections) {
             if (!GFDict(c) || ![self connection:c hasUsage:[usage integerValue]]) continue;
-            NSInteger port = GFInt(c[@"port"]);
-            NSString *ip = GFFlexString(c[@"ip"]);
+            NSInteger port = GFInt([c objectForKey:@"port"]);
+            NSString *ip = GFFlexString([c objectForKey:@"ip"]);
             if (!ip.length) ip = info.serverIp;
             if (port > 1024 && port != 443 && ip.length) { info.mediaIp = ip; info.mediaPort = port; }
             break;
@@ -565,10 +566,10 @@ static BOOL GFIsZoneHost(NSString *host)
     }
 
     NSMutableArray *ice = [NSMutableArray array];
-    for (NSDictionary *server in GFArr(GFDict(s[@"iceServerConfiguration"])[@"iceServers"])) {
+    for (NSDictionary *server in GFArr([GFDict([s objectForKey:@"iceServerConfiguration"]) objectForKey:@"iceServers"])) {
         if (!GFDict(server)) continue;
-        NSArray *urls = GFArr(server[@"urls"]) ?: (GFStr(server[@"urls"]) ? @[ GFStr(server[@"urls"]) ] : @[]);
-        [ice addObject:@{ @"urls": urls, @"username": GFStr(server[@"username"]) ?: @"", @"credential": GFStr(server[@"credential"]) ?: @"" }];
+        NSArray *urls = GFArr([server objectForKey:@"urls"]) ?: (GFStr([server objectForKey:@"urls"]) ? @[ GFStr([server objectForKey:@"urls"]) ] : @[]);
+        [ice addObject:@{ @"urls": urls, @"username": GFStr([server objectForKey:@"username"]) ?: @"", @"credential": GFStr([server objectForKey:@"credential"]) ?: @"" }];
     }
     info.iceServers = ice;
     self.session = info;

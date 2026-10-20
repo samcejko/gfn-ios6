@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFKeychain.h"
 #import "GFCommon.h"
 #import <Security/Security.h>
@@ -23,8 +24,8 @@ static NSString * const GFKeychainService = @"com.samcejko.gfn6";
 + (NSData *)dataForKey:(NSString *)key
 {
     NSMutableDictionary *q = [self queryForKey:key];
-    q[(__bridge id)kSecReturnData] = (__bridge id)kCFBooleanTrue;
-    q[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
+    GFLegacyDictionarySet(q, (__bridge id)kSecReturnData, (__bridge id)kCFBooleanTrue);
+    GFLegacyDictionarySet(q, (__bridge id)kSecMatchLimit, (__bridge id)kSecMatchLimitOne);
     CFTypeRef result = NULL;
     OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)q, &result);
     if (status == errSecSuccess && result) {
@@ -40,8 +41,8 @@ static NSString * const GFKeychainService = @"com.samcejko.gfn6";
     if (!data) { [self removeKey:key]; return YES; }
     NSMutableDictionary *q = [self queryForKey:key];
     SecItemDelete((__bridge CFDictionaryRef)q);
-    q[(__bridge id)kSecValueData] = data;
-    q[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleAfterFirstUnlock;
+    GFLegacyDictionarySet(q, (__bridge id)kSecValueData, data);
+    GFLegacyDictionarySet(q, (__bridge id)kSecAttrAccessible, (__bridge id)kSecAttrAccessibleAfterFirstUnlock);
     OSStatus status = SecItemAdd((__bridge CFDictionaryRef)q, NULL);
     if (status == errSecSuccess) {
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:[self fallbackKey:key]];

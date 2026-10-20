@@ -28,9 +28,9 @@
     NSMutableArray *controllers = [NSMutableArray array];
     NSArray *pairs = @[ @[ self.library, [theme tabIconLibrary] ], @[ self.store, [theme tabIconSearch] ], @[ self.settings, [theme tabIconSettings] ] ];
     for (NSArray *pair in pairs) {
-        UIViewController *vc = pair[0];
+        UIViewController *vc = [pair objectAtIndex:0];
         UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:vc];
-        nav.tabBarItem = [[UITabBarItem alloc] initWithTitle:vc.title image:pair[1] tag:controllers.count];
+        nav.tabBarItem = [[UITabBarItem alloc] initWithTitle:vc.title image:[pair objectAtIndex:1] tag:controllers.count];
         [controllers addObject:nav];
     }
     self.viewControllers = controllers;

@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFAPI.h"
 #import "GFAuth.h"
 #import "GFHTTP.h"
@@ -78,7 +79,7 @@ static NSString *g_vpcId;
 {
     if (g_vpcId.length) { completion(g_vpcId, nil); return; }
     [self fetchServerInfo:^(NSDictionary *json, NSError *error) {
-        NSString *id = GFStr(GFDict(json[@"requestStatus"])[@"serverId"]);
+        NSString *id = GFStr([GFDict([json objectForKey:@"requestStatus"]) objectForKey:@"serverId"]);
         if (id.length) {
             g_vpcId = id;
             GFLog(@"VPC id: %@", id);
@@ -103,9 +104,9 @@ static NSString *g_vpcId;
         if (!json) { completion(nil, error); return; }
         NSMutableArray *regions = [NSMutableArray array];
         NSMutableSet *seen = [NSMutableSet set];
-        for (NSDictionary *entry in GFArr(json[@"metaData"])) {
-            NSString *name = [GFStr(GFDict(entry)[@"key"]) stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-            NSString *value = [GFStr(GFDict(entry)[@"value"]) stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        for (NSDictionary *entry in GFArr([json objectForKey:@"metaData"])) {
+            NSString *name = [GFStr([GFDict(entry) objectForKey:@"key"]) stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            NSString *value = [GFStr([GFDict(entry) objectForKey:@"value"]) stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
             if (!name.length || [name hasPrefix:@"gfn-"] || ![value hasPrefix:@"https://"]) continue;
             NSString *authority = [[value substringFromIndex:8] componentsSeparatedByString:@"/"].firstObject;
             if (!authority.length || [authority rangeOfString:@"@"].location != NSNotFound) continue;
@@ -165,7 +166,7 @@ static NSInteger GFConnectMillis(NSString *host, int port)
                 NSString *authority = [[r.url substringFromIndex:8] componentsSeparatedByString:@"/"].firstObject;
                 NSArray *hp = [authority componentsSeparatedByString:@":"];
                 NSString *host = hp.firstObject;
-                int port = hp.count > 1 ? [hp[1] intValue] : 443;
+                int port = hp.count > 1 ? [[hp objectAtIndex:1] intValue] : 443;
                 GFConnectMillis(host, port);                     // warms the DNS cache and the route
                 NSInteger total = 0, answered = 0;
                 for (int i = 0; i < 3; i++) {
@@ -208,34 +209,34 @@ static NSString * const GFCatalogFields =
         NSDictionary *filters = ownedOnly ? @{ @"variants": @{ @"gfn": @{ @"library": @{ @"status": @{ @"notEquals": @"NOT_OWNED" } } } } } : @{};
         NSMutableDictionary *variables = [@{ @"vpcId": vpcId, @"locale": @"en_US", @"sortString": sortString, @"fetchCount": @200,
                                              @"cursor": cursor ?: @"", @"filters": filters } mutableCopy];
-        if (searching) variables[@"searchString"] = query;
+        if (searching) GFLegacyDictionarySet(variables, @"searchString", query);
         GFHTTPTask *inner = [GFHTTP postJSON:GFGraphQLURL headers:[self graphqlHeaders] object:@{ @"query": document, @"variables": variables } retries:1
                                   completion:^(id json, NSInteger status, NSError *error2) {
             if (outer.isCancelled) return;
             NSDictionary *d = GFDict(json);
-            NSArray *errors = GFArr(d[@"errors"]);
+            NSArray *errors = GFArr([d objectForKey:@"errors"]);
             if (status == 401 || status == 403) {
                 [self forgetVpcId];
                 completion(nil, GFMakeError(GFErrorAuth, L(@"The sign-in is no longer valid. Sign in again.")));
                 return;
             }
-            if (error2 && !GFDict(d[@"data"])) { completion(nil, error2); return; }
-            if (errors.count && !GFDict(d[@"data"])) {
-                completion(nil, GFMakeError(GFErrorAPI, GFStr(GFDict(errors.firstObject)[@"message"]) ?: L(@"The catalog request failed.")));
+            if (error2 && !GFDict([d objectForKey:@"data"])) { completion(nil, error2); return; }
+            if (errors.count && !GFDict([d objectForKey:@"data"])) {
+                completion(nil, GFMakeError(GFErrorAPI, GFStr([GFDict(errors.firstObject) objectForKey:@"message"]) ?: L(@"The catalog request failed.")));
                 return;
             }
-            NSDictionary *apps = GFDict(GFDict(d[@"data"])[@"apps"]);
+            NSDictionary *apps = GFDict([GFDict([d objectForKey:@"data"]) objectForKey:@"apps"]);
             GFCatalogPage *page = [[GFCatalogPage alloc] init];
             NSMutableArray *games = [NSMutableArray array];
-            for (NSDictionary *item in GFArr(apps[@"items"])) {
+            for (NSDictionary *item in GFArr([apps objectForKey:@"items"])) {
                 GFGame *g = [GFGame gameFromCatalogItem:GFDict(item)];
                 if (g && g.appId.length) [games addObject:g];
             }
             page.games = games;
-            NSDictionary *pageInfo = GFDict(apps[@"pageInfo"]);
-            NSString *end = GFStr(pageInfo[@"endCursor"]);
-            page.nextCursor = (GFBool(pageInfo[@"hasNextPage"]) && end.length) ? end : nil;
-            page.totalCount = GFInt(pageInfo[@"totalCount"]);
+            NSDictionary *pageInfo = GFDict([apps objectForKey:@"pageInfo"]);
+            NSString *end = GFStr([pageInfo objectForKey:@"endCursor"]);
+            page.nextCursor = (GFBool([pageInfo objectForKey:@"hasNextPage"]) && end.length) ? end : nil;
+            page.totalCount = GFInt([pageInfo objectForKey:@"totalCount"]);
             completion(page, nil);
         }];
         outer.cancelBlock = ^{ [inner cancel]; };

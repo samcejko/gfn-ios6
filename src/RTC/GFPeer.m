@@ -1,3 +1,4 @@
+#import "GFLegacyCollections.h"
 #import "GFPeer.h"
 #import "GFCommon.h"
 #import "GFUtils.h"
@@ -270,16 +271,16 @@ static uint32_t resolve_ipv4(NSString *host)
 {
     NSArray *parts = [candidate componentsSeparatedByString:@" "];
     if (parts.count < 6) return;
-    if ([[parts[2] lowercaseString] isEqualToString:@"tcp"]) return;
-    uint32_t ip = parse_ipv4(parts[4]);
-    if (!ip) ip = resolve_ipv4(parts[4]);
+    if ([[[parts objectAtIndex:2] lowercaseString] isEqualToString:@"tcp"]) return;
+    uint32_t ip = parse_ipv4([parts objectAtIndex:4]);
+    if (!ip) ip = resolve_ipv4([parts objectAtIndex:4]);
     if (!ip) ip = _serverIp;      // the offer's 0.0.0.0 placeholders mean the seat itself
-    [self addCandidateIp:ip port:(uint16_t)[parts[5] integerValue]];
+    [self addCandidateIp:ip port:(uint16_t)[[parts objectAtIndex:5] integerValue]];
 }
 
 - (void)addRemoteCandidate:(NSDictionary *)candidate
 {
-    NSString *s = candidate[@"candidate"];
+    NSString *s = [candidate objectForKey:@"candidate"];
     if (!s.length) return;
     [self perform:^{ [self addCandidateString:s]; }];
 }
@@ -570,7 +571,7 @@ static void sctp_closed_cb(void *ctx, const char *reason)
 - (void)sctpChannelOpened:(uint16_t)stream label:(NSString *)label
 {
     GFLog(@"Peer: server opened data channel '%@' on stream %u", label, stream);
-    self.channelLabels[@(stream)] = label;
+    GFLegacyDictionarySet(self.channelLabels, @(stream), label);
 }
 
 - (void)sctpChannelAcked:(uint16_t)stream
@@ -596,7 +597,7 @@ static void sctp_closed_cb(void *ctx, const char *reason)
         }
         return;
     }
-    NSString *label = self.channelLabels[@(stream)] ?: @"";
+    NSString *label = [self.channelLabels objectForKey:@(stream)] ?: @"";
     if ([label isEqualToString:@"control_channel"] || ppid == GF_SCTP_PPID_STRING) {
         NSDictionary *json = GFDict([GFUtils JSONObjectFromData:d]);
         if (json) {
