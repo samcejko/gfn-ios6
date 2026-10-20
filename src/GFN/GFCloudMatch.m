@@ -74,7 +74,7 @@ static BOOL GFIsZoneHost(NSString *host)
 {
     if ((self = [super init])) {
         _appId = [appId copy];
-        _clientId = [[[NSUUID UUID] UUIDString] lowercaseString];
+        _clientId = [GFUniqueIdentifier() lowercaseString];
         _deviceId = [GFSettings deviceId];
         _adStates = [NSMutableDictionary dictionary];
     }
@@ -217,7 +217,7 @@ static BOOL GFIsZoneHost(NSString *host)
     NSString *resolution = [GFUtils JSONDataFromObject:@{ @"horizontalPixels": @(width), @"verticalPixels": @(height) }] ?
         [[NSString alloc] initWithData:[GFUtils JSONDataFromObject:@{ @"horizontalPixels": @(width), @"verticalPixels": @(height) }] encoding:NSUTF8StringEncoding] : @"";
     NSArray *metadata = @[
-        @{ @"key": @"SubSessionId", @"value": [[[NSUUID UUID] UUIDString] lowercaseString] },
+        @{ @"key": @"SubSessionId", @"value": [GFUniqueIdentifier() lowercaseString] },
         @{ @"key": @"wssignaling", @"value": @"1" },
         @{ @"key": @"GSStreamerType", @"value": @"WebRTC" },
         @{ @"key": @"networkType", @"value": @"Unknown" },
@@ -607,7 +607,7 @@ static BOOL GFIsZoneHost(NSString *host)
         base = [base hasSuffix:@"/"] ? [base substringToIndex:base.length - 1] : base;
     }
     GFLog(@"Ending the session left over from a previous run: %@", sessionId);
-    NSDictionary *headers = [GFAPI cloudMatchHeadersWithClientId:[[[NSUUID UUID] UUIDString] lowercaseString] deviceId:[GFSettings deviceId]];
+    NSDictionary *headers = [GFAPI cloudMatchHeadersWithClientId:[GFUniqueIdentifier() lowercaseString] deviceId:[GFSettings deviceId]];
     [self deleteSession:sessionId bases:@[ base ] index:0 headers:headers completion:^(NSInteger outcome) {
         if (outcome != 0) [GFSettings forgetSession];   // gone, or not ours to end: either way stop blocking launches with it
         if (completion) completion();

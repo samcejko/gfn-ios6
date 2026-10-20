@@ -55,3 +55,5 @@ NSDate *GFDateFromISO(NSString *string);
 
 // Monotonic microseconds since an arbitrary point (mach_absolute_time based)
 uint64_t GFMonotonicMicros(void);
+
+NSString *GFUniqueIdentifier(void);

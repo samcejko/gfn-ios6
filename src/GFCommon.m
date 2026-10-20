@@ -79,3 +79,13 @@ uint64_t GFMonotonicMicros(void)
     uint64_t t = mach_absolute_time();
     return (t * info.numer / info.denom) / 1000ULL;
 }
+
+
+// CFUUID is available before iOS 6 and preserves the UUID string format.
+NSString *GFUniqueIdentifier(void)
+{
+    CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
+    CFStringRef value = CFUUIDCreateString(kCFAllocatorDefault, uuid);
+    CFRelease(uuid);
+    return (__bridge_transfer NSString *)value;
+}

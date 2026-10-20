@@ -14,6 +14,31 @@
 #import "GFCommon.h"
 
 // A view that takes keyboard input and forwards it as key presses
+
+static UIImage *AuditDirectionIcon(NSString *direction, UIColor *color)
+{
+    if (![@[@"left", @"right", @"up", @"down"] containsObject:direction]) return nil;
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(18, 18), NO, 0);
+    CGContextRef ctx = UIGraphicsGetCurrentContext();
+    CGContextTranslateCTM(ctx, 9, 9);
+    CGFloat angle = [direction isEqualToString:@"left"] ? 3.14159265 :
+        ([direction isEqualToString:@"up"] ? -1.57079633 : ([direction isEqualToString:@"down"] ? 1.57079633 : 0));
+    CGContextRotateCTM(ctx, angle);
+    CGContextSetStrokeColorWithColor(ctx, color.CGColor);
+    CGContextSetLineWidth(ctx, 2);
+    CGContextSetLineCap(ctx, kCGLineCapRound);
+    CGContextSetLineJoin(ctx, kCGLineJoinRound);
+    CGContextMoveToPoint(ctx, -6, 0);
+    CGContextAddLineToPoint(ctx, 6, 0);
+    CGContextMoveToPoint(ctx, 1, -5);
+    CGContextAddLineToPoint(ctx, 6, 0);
+    CGContextAddLineToPoint(ctx, 1, 5);
+    CGContextStrokePath(ctx);
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return image;
+}
+
 @interface GFKeyInputView : UIView <UIKeyInput>
 @property (nonatomic, copy) void (^onCharacter)(unichar c);
 @property (nonatomic, copy) void (^onBackspace)(void);
@@ -178,9 +203,10 @@
     UIToolbar *bar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 44)];
     bar.barStyle = UIBarStyleBlack;
     NSMutableArray *items = [NSMutableArray array];
-    NSArray *keys = @[ @[ @"Esc", @"escape" ], @[ @"Tab", @"tab" ], @[ @"Enter", @"enter" ], @[ @"↑", @"up" ], @[ @"↓", @"down" ], @[ @"←", @"left" ], @[ @"→", @"right" ], @[ @"F1", @"f1" ], @[ @"F5", @"f5" ] ];
+    NSArray *keys = @[ @[ @"Esc", @"escape" ], @[ @"Tab", @"tab" ], @[ @"Enter", @"enter" ], @[ @"", @"up" ], @[ @"", @"down" ], @[ @"", @"left" ], @[ @"", @"right" ], @[ @"F1", @"f1" ], @[ @"F5", @"f5" ] ];
     for (NSArray *k in keys) {
-        UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithTitle:k[0] style:UIBarButtonItemStyleBordered target:self action:@selector(accessoryKey:)];
+        UIImage *arrow = AuditDirectionIcon(k[1], [UIColor whiteColor]);
+        UIBarButtonItem *item = arrow ? [[UIBarButtonItem alloc] initWithImage:arrow style:UIBarButtonItemStyleBordered target:self action:@selector(accessoryKey:)] : [[UIBarButtonItem alloc] initWithTitle:k[0] style:UIBarButtonItemStyleBordered target:self action:@selector(accessoryKey:)];
         item.accessibilityLabel = k[1];
         [items addObject:item];
     }
@@ -212,6 +238,20 @@
 - (UIRectEdge)preferredScreenEdgesDeferringSystemGestures { return UIRectEdgeAll; }
 - (BOOL)prefersHomeIndicatorAutoHidden { return YES; }
 #endif
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    // iOS 6 only listens to the application for the status bar (iOS 7+ ask prefersStatusBarHidden)
+    [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
+    GFModernStatusBarChanged(self);
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationFade];
+}
 
 - (void)viewDidAppear:(BOOL)animated
 {
@@ -422,14 +462,15 @@
     [sheet addButtonWithTitle:self.statsLabel.hidden ? L(@"Show statistics") : L(@"Hide statistics")];
     [sheet addButtonWithTitle:L(@"Send Escape")];
     [sheet addButtonWithTitle:L(@"Send Alt+Enter")];
-    sheet.destructiveButtonIndex = [sheet addButtonWithTitle:L(@"Quit game")];
+    [sheet addButtonWithTitle:L(@"Quit game")];
     sheet.cancelButtonIndex = [sheet addButtonWithTitle:L(@"Back to game")];
     if (GFIsPad()) [sheet showFromRect:self.menuButton.frame inView:self.view animated:YES];
-    else [sheet showInView:self.view];
+    else [sheet showInView:self.view.window ?: self.view];
 }
 
 - (void)actionSheet:(UIActionSheet *)sheet clickedButtonAtIndex:(NSInteger)index
 {
+    if (index < 0 || index == sheet.cancelButtonIndex) return;
     switch (index) {
         case 0: [self.keyInput becomeFirstResponder]; break;
         case 1: [GFSettings setTouchGamepad:self.gamepad.hidden]; break;

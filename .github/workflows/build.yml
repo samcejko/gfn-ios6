@@ -5,12 +5,19 @@ on:
     branches: ['**']   # not for tags, a release tag points at a commit that was already built
   pull_request:
   workflow_dispatch:
+    inputs:
+      compatibility_min:
+        description: 'Compile-audit minimum for armv7; package metadata stays unchanged'
+        type: choice
+        default: '5.0'
+        options: ['4.3', '5.0', '5.1', '6.0']
 
 # The build only reads the repository; nothing here needs a write token.
 permissions:
   contents: read
 
 env:
+  COMPATIBILITY_MIN: ${{ inputs.compatibility_min }}
   THEOS: /home/runner/theos
   MBEDTLS_VERSION: "3.6.7"
   OPUS_VERSION: "1.4"
@@ -142,8 +149,13 @@ jobs:
           cp vendor/opus/COPYING Resources/licenses/opus-COPYING.txt
           ls -la Resources/licenses
 
+      - name: Check production HTTP chunk-size parser
+        run: python3 tools/check_http_chunk_size.py
+
       - name: Generate icons and launch images
-        run: python3 tools/gen_assets.py Resources
+        run: |
+          python3 tools/gen_assets.py Resources
+          python3 tools/check_icon_corners.py Resources
 
       - name: Patch the iOS 9.3 SDK (stub re-exported libraries missing from theos/sdks)
         run: |
@@ -207,12 +219,17 @@ jobs:
 
       - name: Build (${{ matrix.name }})
         run: |
-          set -o pipefail
+          set -eo pipefail
           export PATH="$THEOS/toolchain/linux/iphone/bin:$THEOS/bin:$PATH"
           if [ -n "${{ matrix.scheme }}" ]; then export THEOS_PACKAGE_SCHEME="${{ matrix.scheme }}"; fi
           make clean || true
           # (-k: every file is compiled even after one fails, so one run shows every compile error)
-          make package FINALPACKAGE=1 -j"$(nproc)" -k 2>&1 | tee build.log
+          EXTRA=()
+          if [ -z "${{ matrix.scheme }}" ] && [ -n "$COMPATIBILITY_MIN" ]; then
+            case "$COMPATIBILITY_MIN" in 4.3|5.0|5.1|6.0) ;; *) exit 2 ;; esac
+            EXTRA+=("TARGET=iphone:clang:9.3:$COMPATIBILITY_MIN")
+          fi
+          make package FINALPACKAGE=1 "${EXTRA[@]}" -j"$(nproc)" -k 2>&1 | tee build.log
           APP=$(find .theos/_ -type d -name GFN6.app | head -n1)
           test -n "$APP"
           echo "APP=$APP" >> "$GITHUB_ENV"
