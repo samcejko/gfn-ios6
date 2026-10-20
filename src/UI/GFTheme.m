@@ -5,6 +5,17 @@
 #import "GFModern.h"
 #import "GFCommon.h"
 
+static UIImage *GFStretchImage(UIImage *image, UIEdgeInsets caps)
+{
+    if ([image respondsToSelector:@selector(resizableImageWithCapInsets:resizingMode:)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability"
+        return [image resizableImageWithCapInsets:caps resizingMode:UIImageResizingModeStretch];
+#pragma clang diagnostic pop
+    }
+    return [image stretchableImageWithLeftCapWidth:(NSInteger)caps.left topCapHeight:(NSInteger)caps.top];
+}
+
 static UIColor *RGB(NSInteger r, NSInteger g, NSInteger b)
 {
     return [UIColor colorWithRed:r / 255.0 green:g / 255.0 blue:b / 255.0 alpha:1.0];
@@ -47,7 +58,7 @@ static UIImage *GFRoundedGradientImage(UIColor *top, UIColor *bottom, UIColor *s
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     CGFloat cap = radius + 5;
-    return [image resizableImageWithCapInsets:UIEdgeInsetsMake(cap, cap, cap, cap) resizingMode:UIImageResizingModeStretch];
+    return GFStretchImage(image, UIEdgeInsetsMake(cap, cap, cap, cap));
 }
 
 // A bar background: top highlight hairline, gradient body, bottom line.
@@ -63,7 +74,7 @@ static UIImage *GFBarImage(UIColor *top, UIColor *bottom, UIColor *line, CGFloat
     UIRectFill(CGRectMake(0, height - 1, size.width, 1));
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
-    return [image resizableImageWithCapInsets:UIEdgeInsetsMake(2, 1, 2, 1) resizingMode:UIImageResizingModeStretch];
+    return GFStretchImage(image, UIEdgeInsetsMake(2, 1, 2, 1));
 }
 
 // Draws with a block into an image of the given size (transparent background)
@@ -297,7 +308,7 @@ static UIImage *GFDrawImage(CGSize size, void (^draw)(CGContextRef ctx))
             UIColor *a = [UIColor colorWithWhite:0 alpha:top ? 0.75 : 0.0], *b = [UIColor colorWithWhite:0 alpha:top ? 0.0 : 0.75];
             GFDrawVerticalGradient(ctx, CGRectMake(0, 0, 4, 64), a, b);
         });
-        return [image resizableImageWithCapInsets:UIEdgeInsetsMake(0, 1, 0, 1) resizingMode:UIImageResizingModeStretch];
+        return GFStretchImage(image, UIEdgeInsetsMake(0, 1, 0, 1));
     }];
 }
 

@@ -221,8 +221,17 @@ static void GFVTOutput(void *refcon, CFDictionaryRef frameInfo, OSStatus status,
     NSDictionary *extensions = @{ (__bridge NSString *)kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms: atoms };
     OSStatus st = CMVideoFormatDescriptionCreate(kCFAllocatorDefault, kCMVideoCodecType_H264, w, h, (__bridge CFDictionaryRef)extensions, &_format);
     if (st != 0 || !_format) { self.lastError = [NSString stringWithFormat:@"format description %d", (int)st]; _format = NULL; return NO; }
-    NSDictionary *attrs = @{ (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
-                             (__bridge NSString *)kCVPixelBufferOpenGLESCompatibilityKey: @YES };
+    NSMutableDictionary *attrs = [NSMutableDictionary dictionaryWithDictionary:@{
+        (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
+        (__bridge NSString *)kCVPixelBufferIOSurfacePropertiesKey: @{}
+    }];
+    // The texture cache on iOS 5 needs an IOSurface; the extra hint arrived in iOS 6.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability"
+    if (&kCVPixelBufferOpenGLESCompatibilityKey != NULL && kCVPixelBufferOpenGLESCompatibilityKey) {
+        [attrs setObject:@YES forKey:(__bridge NSString *)kCVPixelBufferOpenGLESCompatibilityKey];
+    }
+#pragma clang diagnostic pop
     GFVTOutputCallbackRecord cb = { GFVTOutput, (__bridge void *)self };
     st = g_create(kCFAllocatorDefault, _format, NULL, (__bridge CFDictionaryRef)attrs, &cb, &_session);
     if (st != 0 || !_session) {

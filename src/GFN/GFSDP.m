@@ -49,7 +49,7 @@
         else if ([name isEqualToString:@"fingerprint"] && !o.fingerprint.length) o.fingerprint = value;
         else if ([name isEqualToString:@"candidate"]) {
             NSMutableArray *parts = [[value componentsSeparatedByString:@" "] mutableCopy];
-            if (parts.count >= 8 && ip.length && ([[parts objectAtIndex:4] isEqualToString:@"0.0.0.0"] || [[parts objectAtIndex:4] isEqualToString:@"127.0.0.1"])) parts[4] = ip;
+            if (parts.count >= 8 && ip.length && ([[parts objectAtIndex:4] isEqualToString:@"0.0.0.0"] || [[parts objectAtIndex:4] isEqualToString:@"127.0.0.1"])) [parts replaceObjectAtIndex:4 withObject:ip];
             if (parts.count >= 3 && [[[parts objectAtIndex:2] lowercaseString] isEqualToString:@"tcp"]) continue;
             [candidates addObject:[@"candidate:" stringByAppendingString:[parts componentsJoinedByString:@" "]]];
         }

@@ -118,14 +118,21 @@ static OSStatus GFAudioRender(void *inRefCon, AudioUnitRenderActionFlags *ioActi
     AVAudioSession *session = [AVAudioSession sharedInstance];
     NSError *error = nil;
     [session setCategory:AVAudioSessionCategoryPlayback error:&error];
-    [session setPreferredSampleRate:SAMPLE_RATE error:nil];
+    if ([session respondsToSelector:@selector(setPreferredSampleRate:error:)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability"
+        [session setPreferredSampleRate:SAMPLE_RATE error:nil];
+#pragma clang diagnostic pop
+    } else {
+        [session setPreferredHardwareSampleRate:SAMPLE_RATE error:nil];
+    }
     [session setPreferredIOBufferDuration:0.01 error:nil];
     [session setActive:YES error:&error];
     if (error) GFLog(@"Audio: session error %@", error.localizedDescription);
 
     AudioComponentDescription desc = { kAudioUnitType_Output, kAudioUnitSubType_RemoteIO, kAudioUnitManufacturer_Apple, 0, 0 };
     AudioComponent comp = AudioComponentFindNext(NULL, &desc);
-    if (!comp || AudioComponentInstanceNew(comp, &_unit) != noErr) { GFLog(@"Audio: no RemoteIO"); return NO; }
+    if (!comp || AudioComponentInstanceNew(comp, &_unit) != noErr) { GFLog(@"Audio: no RemoteIO"); [self stop]; return NO; }
     AudioStreamBasicDescription fmt;
     memset(&fmt, 0, sizeof(fmt));
     fmt.mSampleRate = SAMPLE_RATE;
@@ -140,23 +147,39 @@ static OSStatus GFAudioRender(void *inRefCon, AudioUnitRenderActionFlags *ioActi
     if (st != noErr) GFLog(@"Audio: stream format failed (%d)", (int)st);
     AURenderCallbackStruct cb = { GFAudioRender, (__bridge void *)self };
     AudioUnitSetProperty(_unit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &cb, sizeof(cb));
-    if (AudioUnitInitialize(_unit) != noErr || AudioOutputUnitStart(_unit) != noErr) { GFLog(@"Audio: unit start failed"); return NO; }
+    if (AudioUnitInitialize(_unit) != noErr || AudioOutputUnitStart(_unit) != noErr) { GFLog(@"Audio: unit start failed"); [self stop]; return NO; }
 
     _running = YES;
     _fadeFrames = 0;
-    pthread_create(&_thread, NULL, GFAudioThread, (__bridge void *)self);
-    GFLog(@"Audio: RemoteIO running at %.0f Hz", session.sampleRate);
+    int threadError = pthread_create(&_thread, NULL, GFAudioThread, (__bridge void *)self);
+    if (threadError) {
+        _running = NO;
+        GFLog(@"Audio: thread creation failed (%d)", threadError);
+        [self stop];
+        return NO;
+    }
+    double hardwareRate;
+    if ([session respondsToSelector:@selector(sampleRate)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability"
+        hardwareRate = session.sampleRate;
+#pragma clang diagnostic pop
+    } else {
+        hardwareRate = session.currentHardwareSampleRate;
+    }
+    GFLog(@"Audio: RemoteIO running at %.0f Hz", hardwareRate);
     return YES;
 }
 
 - (void)stop
 {
-    if (!_running) return;
+    if (!_running && !_unit && !_decoder) return;
     pthread_mutex_lock(&_lock);
+    BOOL hadThread = _running;
     _running = NO;
     pthread_cond_signal(&_cond);
     pthread_mutex_unlock(&_lock);
-    pthread_join(_thread, NULL);
+    if (hadThread) pthread_join(_thread, NULL);
     if (_unit) {
         AudioOutputUnitStop(_unit);
         AudioUnitUninitialize(_unit);
